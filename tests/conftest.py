@@ -1,11 +1,65 @@
+import json
 import os
+from uuid import uuid4
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import event, inspect as sa_inspect
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import sessionmaker
 
 from knowledgeforge.db.models import Base
+
+try:
+    from pgvector.sqlalchemy import Vector
+except ImportError:
+    Vector = None
+
+
+@compiles(UUID, "sqlite")
+def _compile_uuid_sqlite(type_, compiler, **kw):
+    return "TEXT"
+
+
+@compiles(JSONB, "sqlite")
+def _compile_jsonb_sqlite(type_, compiler, **kw):
+    return "TEXT"
+
+
+if Vector is not None:
+
+    @compiles(Vector, "sqlite")
+    def _compile_vector_sqlite(type_, compiler, **kw):
+        return "TEXT"
+
+
+def _generate_uuid_on_insert(mapper, connection, target):
+    mapper_obj = sa_inspect(type(target))
+    for col_attr in mapper_obj.attrs:
+        if not hasattr(col_attr, "columns"):
+            continue
+        for col in col_attr.columns:
+            if isinstance(col.type, UUID) and getattr(target, col_attr.key) is None:
+                setattr(target, col_attr.key, uuid4())
+
+
+def _serialize_jsonb_on_insert(mapper, connection, target):
+    mapper_obj = sa_inspect(type(target))
+    for col_attr in mapper_obj.attrs:
+        if not hasattr(col_attr, "columns"):
+            continue
+        for col in col_attr.columns:
+            if isinstance(col.type, JSONB):
+                val = getattr(target, col_attr.key)
+                if val is not None and not isinstance(val, str):
+                    setattr(target, col_attr.key, json.dumps(val))
+
+
+for mapper in Base.registry.mappers:
+    event.listen(mapper, "before_insert", _generate_uuid_on_insert)
+    event.listen(mapper, "before_insert", _serialize_jsonb_on_insert)
 
 
 @pytest.fixture(autouse=True)
