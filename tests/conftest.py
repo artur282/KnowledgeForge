@@ -1,10 +1,12 @@
 import json
 import os
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import event, inspect as sa_inspect
+from sqlalchemy import event
+from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.ext.compiler import compiles
@@ -72,15 +74,28 @@ def _set_test_env():
 
 
 @pytest.fixture
-def app(monkeypatch):
+async def app(monkeypatch):
     """Create FastAPI app for testing."""
     monkeypatch.setenv("DATABASE_URL", "sqlite+aiosqlite:///test.db")
     monkeypatch.setenv("ELASTICSEARCH_URL", "http://localhost:9200")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test-key")
 
+    from knowledgeforge.config import Settings
+    from knowledgeforge.db.engine import create_engine, get_session_factory
+    from knowledgeforge.db.models import Base
     from knowledgeforge.main import create_app
 
-    return create_app()
+    test_app = create_app()
+
+    settings = Settings()
+    test_app.state.engine = create_engine(settings.database_url)
+    test_app.state.session_factory = get_session_factory(test_app.state.engine)
+    test_app.state.es_client = AsyncMock()
+
+    async with test_app.state.engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    return test_app
 
 
 @pytest.fixture
