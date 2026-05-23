@@ -13,6 +13,8 @@ from knowledgeforge.chat import router as chat_router
 from knowledgeforge.config import Settings
 from knowledgeforge.db.engine import create_engine, get_session_factory
 from knowledgeforge.ingestion import router as ingestion_router
+from knowledgeforge.mcp import mount_mcp_server
+from knowledgeforge.mcp import router as mcp_router
 from knowledgeforge.search import router as search_router
 
 logger = logging.getLogger(__name__)
@@ -69,6 +71,9 @@ def create_app() -> FastAPI:
     app.include_router(ingestion_router)
     app.include_router(search_router)
     app.include_router(chat_router)
+    app.include_router(mcp_router)
+
+    mount_mcp_server(app)
 
     return app
 
