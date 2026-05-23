@@ -1,0 +1,202 @@
+openapi: "3.1.0"
+info:
+  title: KnowledgeForge API
+  version: "0.1.0"
+  description: Enterprise knowledge management platform with AI-powered RAG
+
+servers:
+  - url: http://localhost:8000
+    description: Development server
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  version:
+                    type: string
+                    example: "0.1.0"
+
+  /documents:
+    post:
+      summary: Upload document for ingestion
+      operationId: uploadDocument
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "202":
+          description: Document queued for processing
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: queued
+
+  /documents/{id}:
+    get:
+      summary: Get document status
+      operationId: getDocumentStatus
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Document details
+        "404":
+          description: Document not found
+    delete:
+      summary: Delete document and its chunks
+      operationId: deleteDocument
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Document deleted
+        "404":
+          description: Document not found
+
+  /search:
+    post:
+      summary: Hybrid search
+      operationId: hybridSearch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+                k:
+                  type: integer
+                  default: 10
+                filters:
+                  type: object
+      responses:
+        "200":
+          description: Search results with sources
+
+  /search/suggest:
+    get:
+      summary: Autocomplete suggestions
+      operationId: searchSuggestions
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Suggestion list
+
+  /chat:
+    post:
+      summary: RAG Q&A
+      operationId: chat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                session_id:
+                  type: string
+                  format: uuid
+                question:
+                  type: string
+              required:
+                - question
+      responses:
+        "200":
+          description: Answer with sources
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  answer:
+                    type: string
+                  sources:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        doc_id:
+                          type: string
+                        chunk_index:
+                          type: integer
+                        score:
+                          type: number
+
+  /chat/{session_id}/history:
+    get:
+      summary: Chat session history
+      operationId: getChatHistory
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Message history
+
+  /mcp/tools:
+    get:
+      summary: List available MCP tools
+      operationId: listMcpTools
+      responses:
+        "200":
+          description: MCP tools list
+
+  /eval/run:
+    post:
+      summary: Run RAGAS evaluation
+      operationId: runEvaluation
+      responses:
+        "200":
+          description: Evaluation results
+
+  /eval/reports:
+    get:
+      summary: List evaluation reports
+      operationId: listEvalReports
+      responses:
+        "200":
+          description: Report list
