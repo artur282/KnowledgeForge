@@ -26,4 +26,4 @@ def test_settings_missing_openai_key(monkeypatch):
     monkeypatch.setenv("ELASTICSEARCH_URL", "http://localhost:9200")
 
     with pytest.raises(ValidationError):
-        Settings()
+        Settings(_env_file=None)
