@@ -12,6 +12,7 @@ from knowledgeforge import __version__
 from knowledgeforge.config import Settings
 from knowledgeforge.db.engine import create_engine, get_session_factory
 from knowledgeforge.ingestion import router as ingestion_router
+from knowledgeforge.search import router as search_router
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,7 @@ def create_app() -> FastAPI:
         return {"status": "ok", "version": __version__}
 
     app.include_router(ingestion_router)
+    app.include_router(search_router)
 
     return app
 
