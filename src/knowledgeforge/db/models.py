@@ -1,9 +1,7 @@
-from datetime import datetime, timezone
-from typing import Any
+from datetime import UTC, datetime
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
-    BigInteger,
     CheckConstraint,
     Column,
     DateTime,
@@ -21,7 +19,7 @@ class Base(DeclarativeBase):
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class Document(Base):

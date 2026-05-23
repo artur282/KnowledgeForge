@@ -1,6 +1,4 @@
-import pytest
-from sqlalchemy import inspect
-from knowledgeforge.db.models import Base, Document, DocumentChunk, ChatSession, ChatMessage
+from knowledgeforge.db.models import Base, ChatMessage, ChatSession, Document, DocumentChunk
 
 
 def test_document_table_name():

@@ -1,5 +1,4 @@
-import pytest
-from knowledgeforge.db.engine import create_engine, get_async_session
+from knowledgeforge.db.engine import create_engine
 
 
 def test_create_engine_returns_async_engine():
