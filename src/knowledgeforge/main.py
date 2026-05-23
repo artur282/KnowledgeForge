@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from knowledgeforge import __version__
 from knowledgeforge.config import Settings
 from knowledgeforge.db.engine import create_engine, get_session_factory
+from knowledgeforge.ingestion import router as ingestion_router
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +54,8 @@ def create_app() -> FastAPI:
     @app.get("/health")
     async def health():
         return {"status": "ok", "version": __version__}
+
+    app.include_router(ingestion_router)
 
     return app
 
