@@ -1,4 +1,4 @@
-from knowledgeforge.db.models import Base, ChatMessage, ChatSession, Document, DocumentChunk
+from knowledgeforge.db.models import Base, ChatMessage, ChatSession, Document, DocumentChunk, EvalReport
 
 
 def test_document_table_name():
@@ -19,6 +19,11 @@ def test_chat_message_table_name():
 
 def test_all_tables_registered():
     """Verify all models are registered in Base.metadata."""
-    expected = {"documents", "document_chunks", "chat_sessions", "chat_messages"}
+    expected = {"documents", "document_chunks", "chat_sessions", "chat_messages", "eval_reports"}
     actual = set(Base.metadata.tables.keys())
     assert actual == expected
+
+
+def test_eval_report_table_name():
+    """EvalReport model maps to eval_reports table."""
+    assert EvalReport.__tablename__ == "eval_reports"

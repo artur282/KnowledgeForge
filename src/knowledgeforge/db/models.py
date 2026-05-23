@@ -5,6 +5,7 @@ from sqlalchemy import (
     CheckConstraint,
     Column,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     String,
@@ -89,3 +90,19 @@ class ChatMessage(Base):
 
     def __repr__(self) -> str:
         return f"<ChatMessage id={self.id} role={self.role} session={self.session_id}>"
+
+
+class EvalReport(Base):
+    __tablename__ = "eval_reports"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default="gen_random_uuid()")
+    name = Column(Text, nullable=False)
+    faithfulness = Column(Float, nullable=True)
+    answer_relevancy = Column(Float, nullable=True)
+    context_precision = Column(Float, nullable=True)
+    context_recall = Column(Float, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=_now)
+    results_json = Column("results_json", JSONB, nullable=False, server_default="{}")
+
+    def __repr__(self) -> str:
+        return f"<EvalReport id={self.id} name={self.name}>"
