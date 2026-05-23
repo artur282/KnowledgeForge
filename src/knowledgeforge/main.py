@@ -4,6 +4,7 @@ import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
+from elasticsearch import AsyncElasticsearch
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -24,6 +25,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.engine = create_engine(settings.database_url)
     app.state.session_factory = get_session_factory(app.state.engine)
 
+    app.state.es_client = AsyncElasticsearch(
+        hosts=[settings.elasticsearch_url],
+        request_timeout=30,
+    )
+    info = await app.state.es_client.info()
+    logger.info("Elasticsearch connected: %s", info["version"]["number"])
+
     logger.info("Database engine initialized")
     logger.info("Elasticsearch URL: %s", settings.elasticsearch_url)
 
@@ -31,6 +39,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     logger.info("Shutting down KnowledgeForge...")
     await app.state.engine.dispose()
+    await app.state.es_client.close()
 
 
 def create_app() -> FastAPI:
