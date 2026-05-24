@@ -1,1 +1,152 @@
+@import "https://fonts.googleapis.com/css2?family=Departure+Mono&family=Share+Tech+Mono&family=VT323&display=swap";
 @import "tailwindcss";
+
+@theme {
+  --font-display: "Departure Mono", monospace;
+  --font-body: "Share Tech Mono", monospace;
+  --font-accent: "VT323", monospace;
+
+  --color-void: #030508;
+  --color-bg-primary: #0B0D0F;
+  --color-bg-surface: #12151A;
+  --color-bg-surface-raised: #181C22;
+  --color-bg-surface-hover: #1E222A;
+
+  --color-border-ghost: rgba(255, 255, 255, 0.04);
+  --color-border-subtle: #1E2028;
+  --color-border-default: #282D38;
+  --color-border-strong: #363C4A;
+
+  --color-accent-primary: #39FF14;
+  --color-accent-mid: #2BD600;
+  --color-accent-dim: #1B8A00;
+  --color-accent-bg: rgba(57, 255, 20, 0.07);
+  --color-accent-glow: rgba(57, 255, 20, 0.25);
+
+  --color-text-bright: #F0F2F5;
+  --color-text-primary: #C8CCD4;
+  --color-text-secondary: #7A8394;
+  --color-text-muted: #4A5568;
+  --color-text-ghost: #2D3548;
+
+  --color-success: #39FF14;
+  --color-error: #FF2E63;
+  --color-warning: #FFB000;
+  --color-info: #0AFFEF;
+
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-primary);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--color-border-default); border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }
+
+  ::selection {
+    background: var(--color-accent-bg);
+    color: var(--color-accent-primary);
+  }
+}
+
+@layer utilities {
+  .bg-grid {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .bg-scanlines::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9998;
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 2px,
+      rgba(0, 0, 0, 0.15) 2px, rgba(0, 0, 0, 0.15) 4px
+    );
+  }
+
+  .bg-noise {
+    position: relative;
+  }
+
+  .bg-noise::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    opacity: 0.035;
+    pointer-events: none;
+    z-index: 9999;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 256px 256px;
+  }
+
+  .glow-text {
+    text-shadow: 0 0 20px var(--color-accent-bg), 0 0 60px rgba(57, 255, 20, 0.08);
+  }
+
+  .border-glow {
+    box-shadow: 0 0 20px var(--color-accent-bg), 0 0 60px rgba(57, 255, 20, 0.08);
+  }
+}
+
+@keyframes cursor-blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 5px var(--color-accent-bg); }
+  50% { box-shadow: 0 0 20px var(--color-accent-bg), 0 0 60px rgba(57, 255, 20, 0.08); }
+}
+
+@keyframes status-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 var(--color-accent-bg); }
+  50% { transform: scale(1.2); box-shadow: 0 0 0 6px transparent; }
+}
+
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(24px); filter: blur(4px); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+.animate-cursor-blink { animation: cursor-blink 1s step-end infinite; }
+.animate-glow-pulse { animation: glow-pulse 3s ease-in-out infinite; }
+.animate-status-pulse { animation: status-pulse 3s ease-in-out infinite; }
+.animate-reveal-up { animation: reveal-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bg-scanlines::before { display: none; }
+  .animate-cursor-blink { animation: none; opacity: 1; }
+  .animate-glow-pulse { animation: none; }
+  .animate-status-pulse { animation: none; }
+  .animate-reveal-up { animation: none; opacity: 1; transform: none; filter: none; }
+}
