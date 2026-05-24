@@ -87,6 +87,7 @@ class HybridSearchService:
         embeddings = OpenAIEmbeddings(
             model="text-embedding-3-small",
             openai_api_key=settings.openai_api_key,
+            base_url=settings.openai_base_url,
         )
 
         query_embedding = await embeddings.aembed_query(query)
@@ -108,7 +109,7 @@ class HybridSearchService:
                 params[f"filter_{key}"] = str(value)
 
         sql += " ORDER BY similarity DESC LIMIT :limit"
-        params["limit"] = str(k)
+        params["limit"] = k
 
         result = await self.session.execute(text(sql), params)
         rows = result.fetchall()

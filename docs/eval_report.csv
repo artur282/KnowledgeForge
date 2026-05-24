@@ -1,0 +1,11 @@
+metric,score,question_id,run_id,created_at
+faithfulness,0.0,default-q1,,2025-05-23
+answer_relevancy,0.0,default-q1,,2025-05-23
+context_precision,0.0,default-q1,,2025-05-23
+faithfulness,0.0,default-q2,,2025-05-23
+answer_relevancy,0.0,default-q2,,2025-05-23
+context_precision,0.0,default-q2,,2025-05-23
+faithfulness,0.0,default-q3,,2025-05-23
+answer_relevancy,0.0,default-q3,,2025-05-23
+context_precision,0.0,default-q3,,2025-05-23
+Note,RAGAS evaluation requires a valid OPENAI_API_KEY to execute.,,,

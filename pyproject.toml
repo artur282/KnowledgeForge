@@ -11,22 +11,16 @@ dependencies = [
     "alembic>=1.13.0",
     "pgvector>=0.3.0",
     "pydantic-settings>=2.0.0",
-    "elasticsearch[async]>=8.15.0",
+    "elasticsearch[async]>=8.15.0,<9.0.0",
     "langchain>=0.3.0",
     "langchain-openai>=0.2.0",
     "langfuse>=2.0.0",
     "mcp>=1.0.0",
     "ragas>=0.2.0",
     "python-multipart>=0.0.9",
-]
-
-[project.optional-dependencies]
-dev = [
-    "pytest>=8.0.0",
-    "pytest-asyncio>=0.24.0",
-    "httpx>=0.27.0",
-    "ruff>=0.6.0",
-    "testcontainers[postgres,elasticsearch]>=4.0.0",
+    "langchain-text-splitters>=0.3.0",
+    "langchain-community>=0.3.0,<0.4.0",
+    "langchain-google-vertexai>=2.0.0",
 ]
 
 [project.scripts]
@@ -50,5 +44,10 @@ ignore = ["B008"]
 
 [dependency-groups]
 dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "httpx>=0.27.0",
+    "ruff>=0.6.0",
+    "testcontainers[postgres,elasticsearch]>=4.0.0",
     "aiosqlite>=0.22.1",
 ]

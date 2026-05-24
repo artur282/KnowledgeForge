@@ -87,8 +87,9 @@ async def summarize_document(doc_id: str) -> str:
             full_content = full_content[: max_tokens * 4] + "...[truncated]"
 
         llm = ChatOpenAI(
-            model="gpt-4.1-mini",
+            model="nvidia/nemotron-3-nano-30b-a3b:free",
             openai_api_key=settings.openai_api_key,
+            base_url=settings.openai_base_url,
             temperature=0,
         )
 

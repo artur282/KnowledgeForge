@@ -46,8 +46,9 @@ class RAGChatService:
         self.message_repo = ChatMessageRepository(session)
 
         self.llm = ChatOpenAI(
-            model="gpt-4.1-mini",
+            model="nvidia/nemotron-3-nano-30b-a3b:free",
             openai_api_key=settings.openai_api_key,
+            base_url=settings.openai_base_url,
             temperature=0,
         )
 
@@ -67,8 +68,9 @@ class RAGChatService:
             | self.llm
         )
 
-    async def _retrieve_and_format(self, question: str) -> str:
+    async def _retrieve_and_format(self, input_data: dict) -> str:
         """Retrieve chunks and format as context string."""
+        question = input_data.get("question", "") if isinstance(input_data, dict) else input_data
         results = await self.search_service.search(query=question, k=5)
         context_parts = [f"[Document: {r.filename}] (chunk {r.chunk_index})\n{r.content}" for r in results]
         return "\n\n---\n\n".join(context_parts) if context_parts else "No relevant context found."

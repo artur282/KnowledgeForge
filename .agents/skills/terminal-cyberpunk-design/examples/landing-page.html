@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEXUS_GRID — Decentralized Trading Protocol</title>
+  <meta name="description" content="Zero-latency algorithmic trading. Connect to the liquidity matrix through military-grade encrypted endpoints.">
+
+  <!-- Fuentes con carácter — NO genéricas -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Share+Tech+Mono&family=VT323&family=Orbitron:wght@700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    /* ═══════════════════════════════════════════
+       DESIGN TOKENS
+       Paleta: Phosphor Green sobre fondo
+       azulado frío. No negro puro.
+    ═══════════════════════════════════════════ */
+    :root {
+      --bg-void: #030508;
+      --bg-primary: #0B0D0F;
+      --bg-surface: #12151A;
+      --bg-surface-raised: #181C22;
+      --bg-surface-hover: #1E222A;
+
+      --border-ghost: rgba(255, 255, 255, 0.04);
+      --border-subtle: #1E2028;
+      --border-default: #282D38;
+
+      --accent: #39FF14;
+      --accent-dim: #1B8A00;
+      --accent-bg: rgba(57, 255, 20, 0.07);
+      --accent-glow: 0 0 20px rgba(57, 255, 20, 0.25), 0 0 60px rgba(57, 255, 20, 0.08);
+      --accent-secondary: #0AFFEF;
+      --accent-sec-bg: rgba(10, 255, 239, 0.07);
+
+      --text-bright: #F0F2F5;
+      --text-primary: #C8CCD4;
+      --text-secondary: #7A8394;
+      --text-muted: #4A5568;
+      --text-ghost: #2D3548;
+      --text-inverse: #0B0D0F;
+
+      --font-display: 'Space Grotesk', sans-serif;
+      --font-body: 'Share Tech Mono', monospace;
+      --font-hero: 'Orbitron', sans-serif;
+      --font-retro: 'VT323', monospace;
+
+      --radius-sm: 3px;
+      --radius-md: 6px;
+      --radius-lg: 10px;
+      --radius-full: 9999px;
+
+      --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* ═══════════════════════════════════════════
+       KEYFRAMES
+    ═══════════════════════════════════════════ */
+    @keyframes cursor-blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+
+    @keyframes reveal-up {
+      from { opacity: 0; transform: translateY(32px); filter: blur(6px); }
+      to { opacity: 1; transform: translateY(0); filter: blur(0); }
+    }
+
+    @keyframes scan-sweep {
+      0% { top: -5%; opacity: 0; }
+      10% { opacity: 0.6; }
+      90% { opacity: 0.6; }
+      100% { top: 105%; opacity: 0; }
+    }
+
+    @keyframes glow-breathe {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 0.8; }
+    }
+
+    @keyframes glitch-1 {
+      0%, 90% { transform: translate(0); }
+      91% { transform: translate(-4px, 2px) skewX(-1deg); }
+      93% { transform: translate(3px, -1px) skewX(0.5deg); }
+      95% { transform: translate(-2px, 1px); }
+      97% { transform: translate(1px, -2px); }
+      100% { transform: translate(0); }
+    }
+
+    @keyframes glitch-2 {
+      0%, 88% { transform: translate(0); }
+      89% { transform: translate(4px, -2px) skewX(1deg); }
+      92% { transform: translate(-3px, 1px); }
+      95% { transform: translate(2px, -1px) skewX(-0.5deg); }
+      98% { transform: translate(-1px, 2px); }
+      100% { transform: translate(0); }
+    }
+
+    @keyframes float-y {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    @keyframes border-trace {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 200% 50%; }
+    }
+
+    /* ═══════════════════════════════════════════
+       RESET & BASE
+    ═══════════════════════════════════════════ */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-body);
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--text-primary);
+      background-color: var(--bg-primary);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+      /* Grid HUD de fondo */
+      background-image:
+        linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+
+    /* Noise texture overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      opacity: 0.03;
+      pointer-events: none;
+      z-index: 9999;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+      background-size: 256px;
+    }
+
+    /* Scanlines overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9998;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 2px,
+        rgba(0,0,0,0.1) 2px, rgba(0,0,0,0.1) 4px
+      );
+    }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 99px; }
+    ::selection { background: var(--accent-bg); color: var(--accent); }
+    a { color: inherit; text-decoration: none; }
+
+    .container { max-width: 1140px; margin: 0 auto; padding: 0 2rem; }
+
+    /* ═══════════════════════════════════════════
+       ANIMATED REVEAL UTILITY
+       Staggered animation en los hijos directos.
+    ═══════════════════════════════════════════ */
+    .stagger > * {
+      animation: reveal-up 0.7s var(--ease-expo) both;
+    }
+    .stagger > *:nth-child(1) { animation-delay: 0s; }
+    .stagger > *:nth-child(2) { animation-delay: 0.1s; }
+    .stagger > *:nth-child(3) { animation-delay: 0.2s; }
+    .stagger > *:nth-child(4) { animation-delay: 0.3s; }
+    .stagger > *:nth-child(5) { animation-delay: 0.4s; }
+    .stagger > *:nth-child(6) { animation-delay: 0.5s; }
+
+    /* ═══════════════════════════════════════════
+       NAVBAR
+    ═══════════════════════════════════════════ */
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 2rem;
+      border-bottom: 1px solid var(--border-ghost);
+      position: sticky;
+      top: 0;
+      background: rgba(11, 13, 15, 0.88);
+      backdrop-filter: blur(20px) saturate(180%);
+      z-index: 100;
+    }
+
+    .nav__brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav__glyph {
+      width: 28px;
+      height: 28px;
+      border: 1.5px solid var(--accent);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      font-family: var(--font-hero);
+      font-size: 10px;
+      font-weight: 900;
+      box-shadow: var(--accent-glow);
+      animation: glow-breathe 4s ease-in-out infinite;
+    }
+
+    .nav__name {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--text-bright);
+      letter-spacing: 0.08em;
+    }
+
+    .nav__ver {
+      font-family: var(--font-body);
+      font-size: 9px;
+      color: var(--text-muted);
+      padding: 1px 6px;
+      border: 1px solid var(--border-subtle);
+      border-radius: 2px;
+      letter-spacing: 0.05em;
+    }
+
+    .nav__links {
+      display: flex;
+      list-style: none;
+      gap: 2px;
+    }
+
+    .nav__link {
+      font-family: var(--font-body);
+      font-size: 12px;
+      color: var(--text-secondary);
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      letter-spacing: 0.1em;
+      transition: all 0.2s var(--ease-expo);
+    }
+
+    .nav__link:hover {
+      color: var(--text-bright);
+      background: var(--bg-surface-hover);
+    }
+
+    .nav__link--active {
+      color: var(--accent);
+      position: relative;
+    }
+
+    .nav__link--active::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 16px;
+      height: 1.5px;
+      background: var(--accent);
+      box-shadow: 0 0 6px var(--accent-bg);
+      border-radius: 99px;
+    }
+
+    .nav__actions { display: flex; gap: 8px; }
+
+    .btn {
+      font-family: var(--font-body);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      padding: 8px 20px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all 0.25s var(--ease-expo);
+      text-transform: uppercase;
+      border: none;
+    }
+
+    .btn--accent {
+      background: var(--accent);
+      color: var(--text-inverse);
+    }
+
+    .btn--accent:hover {
+      box-shadow: var(--accent-glow);
+      filter: brightness(0.92);
+    }
+
+    .btn--ghost {
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1px solid var(--border-default);
+    }
+
+    .btn--ghost:hover {
+      border-color: var(--text-muted);
+      color: var(--text-bright);
+    }
+
+    .btn--lg {
+      padding: 14px 36px;
+      font-size: 13px;
+      border-radius: var(--radius-md);
+    }
+
+    /* ═══════════════════════════════════════════
+       HERO
+    ═══════════════════════════════════════════ */
+    .hero {
+      position: relative;
+      text-align: center;
+      padding: 10rem 0 8rem;
+      overflow: hidden;
+    }
+
+    /* Radial glow detrás del hero */
+    .hero__glow {
+      position: absolute;
+      top: -20%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 600px;
+      background: radial-gradient(
+        ellipse at center,
+        rgba(57, 255, 20, 0.06) 0%,
+        rgba(10, 255, 239, 0.02) 40%,
+        transparent 70%
+      );
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    /* Scan line que cruza el hero */
+    .hero__scanline {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(
+        90deg, transparent,
+        rgba(57, 255, 20, 0.08),
+        transparent
+      );
+      animation: scan-sweep 10s linear infinite;
+      pointer-events: none;
+    }
+
+    /* Data annotations decorativas */
+    .hero__anno {
+      position: absolute;
+      font-family: var(--font-body);
+      font-size: 9px;
+      color: var(--text-ghost);
+      letter-spacing: 0.15em;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .hero__anno--tl { top: 2rem; left: 2rem; }
+    .hero__anno--tr { top: 2rem; right: 2rem; }
+    .hero__anno--bl { bottom: 2rem; left: 2rem; }
+    .hero__anno--br { bottom: 2rem; right: 2rem; }
+
+    /* Glitch title */
+    .hero__title {
+      font-family: var(--font-hero);
+      font-size: clamp(36px, 6vw, 64px);
+      font-weight: 900;
+      color: var(--text-bright);
+      letter-spacing: 0.12em;
+      margin-bottom: 1rem;
+      position: relative;
+      display: inline-block;
+    }
+
+    .hero__title::before,
+    .hero__title::after {
+      content: attr(data-text);
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .hero__title::before {
+      color: var(--accent);
+      animation: glitch-1 4s infinite linear alternate-reverse;
+      clip-path: polygon(0 0, 100% 0, 100% 33%, 0 33%);
+      opacity: 0.7;
+    }
+
+    .hero__title::after {
+      color: var(--accent-secondary);
+      animation: glitch-2 3.5s infinite linear alternate-reverse;
+      clip-path: polygon(0 66%, 100% 66%, 100% 100%, 0 100%);
+      opacity: 0.5;
+    }
+
+    .hero__subtitle {
+      font-family: var(--font-body);
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 1.5rem;
+      animation: reveal-up 0.7s var(--ease-expo) 0.3s both;
+    }
+
+    .hero__command {
+      font-family: var(--font-display);
+      font-size: clamp(18px, 2.5vw, 28px);
+      font-weight: 600;
+      margin-bottom: 3rem;
+      animation: reveal-up 0.7s var(--ease-expo) 0.15s both;
+    }
+
+    .hero__command .prompt { color: var(--accent); }
+    .hero__command .flag { color: var(--accent-secondary); }
+    .hero__command .cursor-block {
+      display: inline-block;
+      width: 12px;
+      height: 1.1em;
+      background: var(--accent);
+      vertical-align: text-bottom;
+      margin-left: 3px;
+      animation: cursor-blink 1s step-end infinite;
+      border-radius: 1px;
+    }
+
+    /* Input group */
+    .hero__input-wrap {
+      display: inline-flex;
+      align-items: center;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+      padding: 6px 8px 6px 16px;
+      gap: 8px;
+      max-width: 480px;
+      width: 90%;
+      animation: reveal-up 0.7s var(--ease-expo) 0.45s both;
+      transition: border-color 0.2s;
+    }
+
+    .hero__input-wrap:focus-within {
+      border-color: var(--accent-dim);
+      box-shadow: 0 0 0 3px var(--accent-bg);
+    }
+
+    .hero__prefix {
+      color: var(--accent);
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .hero__input {
+      flex: 1;
+      font-family: var(--font-body);
+      font-size: 13px;
+      color: var(--text-primary);
+      background: transparent;
+      border: none;
+      outline: none;
+      min-width: 0;
+    }
+
+    .hero__input::placeholder { color: var(--text-muted); }
+
+    /* ═══════════════════════════════════════════
+       SECTIONS
+    ═══════════════════════════════════════════ */
+    .section {
+      padding: 7rem 0;
+      position: relative;
+    }
+
+    .section__head {
+      margin-bottom: 3rem;
+    }
+
+    .section__tag {
+      font-family: var(--font-body);
+      font-size: 10px;
+      color: var(--accent);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section__tag::before {
+      content: '';
+      width: 20px;
+      height: 1.5px;
+      background: var(--accent);
+      border-radius: 99px;
+      box-shadow: 0 0 6px var(--accent-bg);
+    }
+
+    .section__title {
+      font-family: var(--font-display);
+      font-size: clamp(24px, 3vw, 36px);
+      font-weight: 700;
+      color: var(--text-bright);
+      letter-spacing: 0.06em;
+    }
+
+    .section__subtitle {
+      font-family: var(--font-body);
+      color: var(--text-secondary);
+      font-size: 13px;
+      margin-top: 0.5rem;
+      max-width: 540px;
+    }
+
+    /* Divider entre secciones */
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(
+        90deg, transparent 0%,
+        var(--border-default) 25%,
+        var(--accent-dim) 50%,
+        var(--border-default) 75%,
+        transparent 100%
+      );
+    }
+
+    /* ═══════════════════════════════════════════
+       FEATURES GRID — ASIMÉTRICO
+    ═══════════════════════════════════════════ */
+    .features-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 20px;
+    }
+
+    .feature {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 2.5rem 2rem;
+      transition: all 0.3s var(--ease-expo);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Corner brackets decorativos */
+    .feature::before,
+    .feature::after {
+      content: '';
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-style: solid;
+      border-color: var(--border-default);
+      transition: border-color 0.3s;
+      pointer-events: none;
+    }
+
+    .feature::before {
+      top: 8px; left: 8px;
+      border-width: 1px 0 0 1px;
+    }
+
+    .feature::after {
+      bottom: 8px; right: 8px;
+      border-width: 0 1px 1px 0;
+    }
+
+    .feature:hover {
+      border-color: var(--accent-dim);
+      transform: translateY(-6px);
+      box-shadow: var(--accent-glow);
+    }
+
+    .feature:hover::before,
+    .feature:hover::after {
+      border-color: var(--accent-dim);
+    }
+
+    /* Feature full-width (span 2 cols) */
+    .feature--wide {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 2rem;
+      align-items: center;
+    }
+
+    .feature__icon {
+      font-size: 28px;
+      margin-bottom: 1.5rem;
+      color: var(--accent);
+      filter: drop-shadow(0 0 10px var(--accent-bg));
+      animation: float-y 6s ease-in-out infinite;
+    }
+
+    .feature--wide .feature__icon {
+      font-size: 48px;
+      margin-bottom: 0;
+    }
+
+    .feature__title {
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: var(--text-bright);
+      margin-bottom: 0.75rem;
+      text-transform: uppercase;
+    }
+
+    .feature__desc {
+      font-family: var(--font-body);
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    /* Annotation decorativa */
+    .feature__anno {
+      position: absolute;
+      top: 10px;
+      right: 14px;
+      font-family: var(--font-body);
+      font-size: 8px;
+      color: var(--text-ghost);
+      letter-spacing: 0.15em;
+    }
+
+    /* ═══════════════════════════════════════════
+       STATS — GRID ASIMÉTRICO
+    ═══════════════════════════════════════════ */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1.6fr 1fr 1fr;
+      gap: 20px;
+    }
+
+    .stat {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 1.75rem 2rem;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s;
+    }
+
+    .stat:hover {
+      border-color: var(--border-default);
+    }
+
+    /* Glow decorativo en esquina */
+    .stat::after {
+      content: '';
+      position: absolute;
+      top: -30px;
+      right: -30px;
+      width: 100px;
+      height: 100px;
+      background: radial-gradient(circle, var(--accent-bg) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .stat__label {
+      font-family: var(--font-body);
+      font-size: 9px;
+      color: var(--text-muted);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+    }
+
+    .stat__value {
+      font-family: var(--font-hero);
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--text-bright);
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+      position: relative;
+    }
+
+    .stat:first-child .stat__value {
+      font-size: 42px;
+    }
+
+    .stat__delta {
+      font-family: var(--font-body);
+      font-size: 12px;
+      color: var(--accent);
+    }
+
+    .stat__icon {
+      position: absolute;
+      top: 1.5rem;
+      right: 1.5rem;
+      font-size: 18px;
+      opacity: 0.3;
+      z-index: 1;
+    }
+
+    /* ═══════════════════════════════════════════
+       LOG PANEL (Mini terminal)
+    ═══════════════════════════════════════════ */
+    .mini-term {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      margin-top: 3rem;
+    }
+
+    .mini-term__head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border-ghost);
+    }
+
+    .mini-term__title {
+      font-family: var(--font-body);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.12em;
+    }
+
+    .mini-term__dots {
+      display: flex;
+      gap: 5px;
+    }
+
+    .mini-term__dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 99px;
+    }
+
+    .mini-term__dot--r { background: #FF5F57; }
+    .mini-term__dot--y { background: #FEBC2E; }
+    .mini-term__dot--g { background: #28C840; }
+
+    .mini-term__body {
+      padding: 14px 16px;
+      font-size: 11px;
+      line-height: 1.8;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+
+    .mini-term__line {
+      display: flex;
+      gap: 6px;
+    }
+
+    .mini-term__ts { color: var(--text-muted); font-size: 10px; }
+    .mini-term__pfx { color: var(--accent); }
+    .mini-term__msg { color: var(--text-secondary); }
+    .mini-term__ok { color: var(--accent); font-weight: 700; }
+    .mini-term__warn { color: #FFB000; font-weight: 700; }
+    .mini-term__info { color: var(--accent-secondary); }
+
+    .mini-term__cursor {
+      width: 6px;
+      height: 12px;
+      background: var(--accent);
+      animation: cursor-blink 1s step-end infinite;
+      margin-top: 6px;
+      border-radius: 1px;
+    }
+
+    /* ═══════════════════════════════════════════
+       CTA
+    ═══════════════════════════════════════════ */
+    .cta {
+      text-align: center;
+      padding: 6rem 2rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      margin: 5rem 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Grid HUD interno */
+    .cta::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+      background-size: 24px 24px;
+      pointer-events: none;
+    }
+
+    /* Corner brackets */
+    .cta::after {
+      content: '';
+      position: absolute;
+      top: 16px; left: 16px;
+      width: 20px; height: 20px;
+      border-left: 1px solid var(--accent-dim);
+      border-top: 1px solid var(--accent-dim);
+      pointer-events: none;
+    }
+
+    .cta__icon {
+      font-size: 40px;
+      color: var(--accent);
+      margin-bottom: 2rem;
+      filter: drop-shadow(var(--accent-glow));
+      display: inline-block;
+      animation: float-y 5s ease-in-out infinite;
+    }
+
+    .cta__title {
+      font-family: var(--font-display);
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--text-bright);
+      letter-spacing: 0.15em;
+      margin-bottom: 1rem;
+      position: relative;
+    }
+
+    .cta__text {
+      font-family: var(--font-body);
+      font-size: 13px;
+      color: var(--text-secondary);
+      max-width: 440px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.7;
+      position: relative;
+    }
+
+    /* ═══════════════════════════════════════════
+       FOOTER
+    ═══════════════════════════════════════════ */
+    .footer {
+      padding: 1.5rem 2rem;
+      text-align: center;
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.18em;
+      border-top: 1px solid var(--border-ghost);
+    }
+
+    /* ═══════════════════════════════════════════
+       RESPONSIVE
+    ═══════════════════════════════════════════ */
+    @media (max-width: 768px) {
+      .nav__links { display: none; }
+      .features-grid { grid-template-columns: 1fr; }
+      .feature--wide { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: 1fr; }
+      .hero { padding: 6rem 0 4rem; }
+      .section { padding: 4rem 0; }
+    }
+
+    @media (min-width: 769px) and (max-width: 1024px) {
+      .features-grid { grid-template-columns: 1fr 1fr; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══════════════════════ NAVBAR ═══════════════════════ -->
+  <nav class="nav">
+    <div class="nav__brand">
+      <div class="nav__glyph">NX</div>
+      <span class="nav__name">NEXUS_GRID</span>
+      <span class="nav__ver">v3.1</span>
+    </div>
+    <ul class="nav__links">
+      <li><a href="#features" class="nav__link nav__link--active">MODULES</a></li>
+      <li><a href="#" class="nav__link">PROTOCOL</a></li>
+      <li><a href="#" class="nav__link">API_DOCS</a></li>
+      <li><a href="#" class="nav__link">NETWORK</a></li>
+    </ul>
+    <div class="nav__actions">
+      <button class="btn btn--accent">INIT_SESSION</button>
+      <button class="btn btn--ghost">ACCESS</button>
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════ HERO ═══════════════════════ -->
+  <section class="hero">
+    <div class="hero__glow"></div>
+    <div class="hero__scanline"></div>
+
+    <!-- Data annotations decorativas -->
+    <span class="hero__anno hero__anno--tl">< SYS.REF:0x4F2A ></span>
+    <span class="hero__anno hero__anno--tr">// PROTOCOL.v3.1.0</span>
+    <span class="hero__anno hero__anno--bl">NODE:PRIMARY | SECTOR_7G</span>
+    <span class="hero__anno hero__anno--br">LATENCY:0.4ms | UPLINK:ACTIVE</span>
+
+    <div class="container stagger">
+      <h1 class="hero__title" data-text="NEXUS_GRID">NEXUS_GRID</h1>
+
+      <div class="hero__command">
+        <span class="prompt">root@nexus:~$</span> deploy
+        <span class="flag">--protocol</span> quantum
+        <span class="flag">--mode</span> live<span class="cursor-block"></span>
+      </div>
+
+      <p class="hero__subtitle">
+        Zero-latency algorithmic trading infrastructure.
+        Military-grade encrypted endpoints. Direct liquidity matrix access.
+      </p>
+
+      <div class="hero__input-wrap">
+        <span class="hero__prefix">▸</span>
+        <input type="text" class="hero__input"
+               placeholder="execute @trade_module --pair BTC_USD ..."
+               id="command-input">
+        <button class="btn btn--accent">RUN</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════ FEATURES ═══════════════════════ -->
+  <section class="section" id="features">
+    <div class="container">
+      <div class="section__head">
+        <div class="section__tag">// CORE_MODULES</div>
+        <h2 class="section__title">Protocol Architecture</h2>
+        <p class="section__subtitle">
+          Built for institutions and quantitative traders.
+          Every module battle-tested under extreme market conditions.
+        </p>
+      </div>
+
+      <div class="features-grid stagger">
+        <div class="feature">
+          <span class="feature__anno">MOD.001</span>
+          <div class="feature__icon">⚡</div>
+          <h3 class="feature__title">// QUANTUM_ROUTING</h3>
+          <p class="feature__desc">
+            Sub-microsecond order routing through proprietary
+            dark fiber connections. FPGA-accelerated matching engine
+            with deterministic latency guarantees.
+          </p>
+        </div>
+
+        <div class="feature">
+          <span class="feature__anno">MOD.002</span>
+          <div class="feature__icon">🛡️</div>
+          <h3 class="feature__title">// ZERO_TRUST_AUTH</h3>
+          <p class="feature__desc">
+            Hardware security modules with post-quantum
+            cryptographic primitives. Zero-knowledge proof
+            verification on every transaction.
+          </p>
+        </div>
+
+        <div class="feature feature--wide">
+          <div class="feature__icon">🔮</div>
+          <div>
+            <span class="feature__anno">MOD.003</span>
+            <h3 class="feature__title">// NEURAL_ANALYTICS_ENGINE</h3>
+            <p class="feature__desc">
+              Real-time market microstructure analysis powered by transformer
+              architectures. Processes 2.4M events/second across 47 venues
+              simultaneously. Anomaly detection with 99.7% precision.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mini terminal decorativo -->
+      <div class="mini-term">
+        <div class="mini-term__head">
+          <span class="mini-term__title">[SYS] DEPLOYMENT_LOG</span>
+          <div class="mini-term__dots">
+            <span class="mini-term__dot mini-term__dot--r"></span>
+            <span class="mini-term__dot mini-term__dot--y"></span>
+            <span class="mini-term__dot mini-term__dot--g"></span>
+          </div>
+        </div>
+        <div class="mini-term__body">
+          <div class="mini-term__line">
+            <span class="mini-term__ts">[14:58:12]</span>
+            <span class="mini-term__pfx">$</span>
+            <span class="mini-term__msg"><span class="mini-term__info">INFO:</span> Initializing quantum routing module...</span>
+          </div>
+          <div class="mini-term__line">
+            <span class="mini-term__ts">[14:58:14]</span>
+            <span class="mini-term__pfx">$</span>
+            <span class="mini-term__msg"><span class="mini-term__ok">SUCCESS:</span> Connected to 47 venues. Latency: 0.4ms</span>
+          </div>
+          <div class="mini-term__line">
+            <span class="mini-term__ts">[14:58:15]</span>
+            <span class="mini-term__pfx">$</span>
+            <span class="mini-term__msg"><span class="mini-term__ok">SUCCESS:</span> Auth verified. Access: ROOT. ZKP: VALID</span>
+          </div>
+          <div class="mini-term__line">
+            <span class="mini-term__ts">[14:58:22]</span>
+            <span class="mini-term__pfx">$</span>
+            <span class="mini-term__msg"><span class="mini-term__warn">WARN:</span> Market volatility spike. Adjusting risk params...</span>
+          </div>
+          <div class="mini-term__line">
+            <span class="mini-term__ts">[14:58:45]</span>
+            <span class="mini-term__pfx">$</span>
+            <span class="mini-term__msg"><span class="mini-term__info">INFO:</span> Neural engine online. Processing 2.4M events/s</span>
+          </div>
+          <div class="mini-term__cursor"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="container"><div class="divider"></div></div>
+
+  <!-- ═══════════════════════ STATS ═══════════════════════ -->
+  <section class="section">
+    <div class="container">
+      <div class="section__head">
+        <div class="section__tag">> NETWORK_METRICS</div>
+        <h2 class="section__title">Live Protocol Status</h2>
+      </div>
+
+      <div class="stats-grid stagger">
+        <div class="stat">
+          <span class="stat__icon">💎</span>
+          <div class="stat__label">TOTAL VOLUME SETTLED</div>
+          <div class="stat__value">$2.47T</div>
+          <div class="stat__delta">↗ +18.3% vs. prev. epoch</div>
+        </div>
+
+        <div class="stat">
+          <span class="stat__icon">⬡</span>
+          <div class="stat__label">ACTIVE NODES</div>
+          <div class="stat__value">31,847</div>
+          <div class="stat__delta">↗ +4.1%</div>
+        </div>
+
+        <div class="stat">
+          <span class="stat__icon">◈</span>
+          <div class="stat__label">PROTOCOL UPTIME</div>
+          <div class="stat__value">100.00%</div>
+          <div class="stat__delta">↗ 847 days continuous</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════ CTA ═══════════════════════ -->
+  <section class="container">
+    <div class="cta stagger">
+      <div class="cta__icon">⏻</div>
+      <h2 class="cta__title">READY TO INITIALIZE?</h2>
+      <p class="cta__text">
+        Deploy your algorithms on the most advanced decentralized
+        trading protocol. Sub-microsecond execution. Zero downtime.
+      </p>
+      <button class="btn btn--accent btn--lg">◆ DEPLOY_NODE</button>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════ FOOTER ═══════════════════════ -->
+  <footer class="footer">
+    NEXUS_GRID © 2024 — SECURE CONNECTION ESTABLISHED — ALL SYSTEMS NOMINAL
+  </footer>
+
+</body>
+</html>

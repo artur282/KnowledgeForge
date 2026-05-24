@@ -29,6 +29,7 @@ class IngestionService:
         es_client: AsyncElasticsearch,
         settings: Settings,
     ) -> None:
+        self.session = session
         self.doc_repo = DocumentRepository(session)
         self.chunk_repo = DocumentChunkRepository(session)
         self.es_client = es_client
@@ -40,10 +41,11 @@ class IngestionService:
         self.embeddings = OpenAIEmbeddings(
             model="text-embedding-3-small",
             openai_api_key=settings.openai_api_key,
+            base_url=settings.openai_base_url,
         )
 
-    async def process(self, file_bytes: bytes, filename: str) -> UUID:
-        """Full ingestion pipeline."""
+    async def create_document(self, file_bytes: bytes, filename: str) -> UUID:
+        """Create document record and return its ID (for background processing)."""
         content_hash = compute_hash(file_bytes)
 
         existing = await self._get_by_hash(content_hash)
@@ -52,7 +54,12 @@ class IngestionService:
             return existing.id
 
         doc = await self.doc_repo.create(filename, content_hash)
-        await self.doc_repo.update_status(doc.id, "processing")
+        await self.session.commit()
+        return doc.id
+
+    async def process_existing(self, doc_id: UUID, file_bytes: bytes, filename: str) -> UUID:
+        """Process an already-created document record."""
+        await self.doc_repo.update_status(doc_id, "processing")
 
         try:
             text = parse_document(file_bytes, filename)
@@ -61,7 +68,7 @@ class IngestionService:
 
             chunk_records = [
                 {
-                    "document_id": doc.id,
+                    "document_id": doc_id,
                     "chunk_index": i,
                     "content": chunk,
                     "embedding": embedding,
@@ -71,17 +78,26 @@ class IngestionService:
             ]
 
             await self.chunk_repo.create_many(chunk_records)
-            await self._write_to_es(doc.id, filename, chunk_records)
+            await self._write_to_es(doc_id, filename, chunk_records)
 
-            await self.doc_repo.update_status(doc.id, "ready")
+            await self.doc_repo.update_status(doc_id, "ready")
             logger.info("Document %s ingested successfully (%d chunks)", filename, len(chunks))
 
         except Exception:
-            await self.doc_repo.update_status(doc.id, "failed")
+            await self.doc_repo.update_status(doc_id, "failed")
             logger.exception("Failed to ingest document %s", filename)
             raise
 
-        return doc.id
+        return doc_id
+
+    async def process(self, file_bytes: bytes, filename: str) -> UUID:
+        """Full ingestion pipeline (synchronous, for backward compatibility)."""
+        content_hash = compute_hash(file_bytes)
+        existing = await self._get_by_hash(content_hash)
+        if existing:
+            return existing.id
+        doc = await self.doc_repo.create(filename, content_hash)
+        return await self.process_existing(doc.id, file_bytes, filename)
 
     async def _get_by_hash(self, content_hash: str):
         """Get document by content hash."""

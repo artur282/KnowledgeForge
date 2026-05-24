@@ -21,6 +21,7 @@ async def get_session(request: Request) -> AsyncSession:
     async with session_factory() as session:
         try:
             yield session
+            await session.commit()
         finally:
             await session.close()
 
@@ -44,6 +45,23 @@ def get_document_repo(
     return DocumentRepository(session)
 
 
+async def _process_in_background(
+    session_factory,
+    es_client,
+    settings,
+    doc_id: UUID,
+    file_bytes: bytes,
+    filename: str,
+) -> None:
+    """Process document in background with its own session."""
+    async with session_factory() as session:
+        service = IngestionService(session, es_client, settings)
+        doc = await service.doc_repo.get_by_id(doc_id)
+        if doc and doc.status in ("ready", "processing"):
+            return
+        await service.process_existing(doc_id, file_bytes, filename)
+
+
 @router.post(
     "",
     response_model=DocumentUploadResponse,
@@ -53,12 +71,29 @@ def get_document_repo(
 async def upload_document(
     file: UploadFile,
     background_tasks: BackgroundTasks,
+    request: Request,
     ingestion_svc: IngestionService = Depends(get_ingestion_service),
 ):
     """Upload a document for async ingestion."""
+    from knowledgeforge.config import Settings
+
     file_bytes = await file.read()
-    doc_id = await ingestion_svc.process(file_bytes, file.filename or "unknown")
-    return DocumentUploadResponse(document_id=doc_id)
+    filename = file.filename or "unknown"
+
+    doc_id = await ingestion_svc.create_document(file_bytes, filename)
+
+    settings = Settings()
+    background_tasks.add_task(
+        _process_in_background,
+        request.app.state.session_factory,
+        request.app.state.es_client,
+        settings,
+        doc_id,
+        file_bytes,
+        filename,
+    )
+
+    return DocumentUploadResponse(document_id=doc_id, status="queued")
 
 
 @router.get(

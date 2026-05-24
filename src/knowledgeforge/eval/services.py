@@ -34,12 +34,14 @@ class RAGASEvalService:
         self.settings = settings
         self.eval_repo = eval_repo
         self.llm = ChatOpenAI(
-            model="gpt-4.1-mini",
+            model="nvidia/nemotron-3-nano-30b-a3b:free",
             openai_api_key=settings.openai_api_key,
+            base_url=settings.openai_base_url,
         )
         self.embeddings = OpenAIEmbeddings(
             model="text-embedding-3-small",
             openai_api_key=settings.openai_api_key,
+            base_url=settings.openai_base_url,
         )
 
     async def run_evaluation(self, name: str, dataset_path: str | None = None) -> dict:

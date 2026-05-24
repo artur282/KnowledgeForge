@@ -12,7 +12,7 @@ async def test_upload_document(mock_service, client: AsyncClient):
     from uuid import uuid4
 
     mock_instance = AsyncMock()
-    mock_instance.process.return_value = uuid4()
+    mock_instance.create_document.return_value = uuid4()
     mock_service.return_value = mock_instance
 
     response = await client.post(

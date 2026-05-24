@@ -10,6 +10,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, relationship
@@ -26,7 +27,7 @@ def _now() -> datetime:
 class Document(Base):
     __tablename__ = "documents"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, server_default="gen_random_uuid()")
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
     filename = Column(Text, nullable=False)
     content_hash = Column(Text, nullable=False, unique=True)
     status = Column(String(20), nullable=False, default="pending")
@@ -42,7 +43,7 @@ class DocumentChunk(Base):
     __tablename__ = "document_chunks"
     __table_args__ = (CheckConstraint("chunk_index >= 0", name="chk_chunk_index_positive"),)
 
-    id = Column(UUID(as_uuid=True), primary_key=True, server_default="gen_random_uuid()")
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
     document_id = Column(
         UUID(as_uuid=True),
         ForeignKey("documents.id", ondelete="CASCADE"),
@@ -62,7 +63,7 @@ class DocumentChunk(Base):
 class ChatSession(Base):
     __tablename__ = "chat_sessions"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, server_default="gen_random_uuid()")
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
     created_at = Column(DateTime(timezone=True), nullable=False, default=_now)
 
     messages = relationship("ChatMessage", back_populates="session", cascade="all, delete-orphan")
@@ -75,7 +76,7 @@ class ChatMessage(Base):
     __tablename__ = "chat_messages"
     __table_args__ = (CheckConstraint("role IN ('user', 'assistant')", name="chk_role_valid"),)
 
-    id = Column(UUID(as_uuid=True), primary_key=True, server_default="gen_random_uuid()")
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
     session_id = Column(
         UUID(as_uuid=True),
         ForeignKey("chat_sessions.id", ondelete="CASCADE"),
@@ -95,7 +96,7 @@ class ChatMessage(Base):
 class EvalReport(Base):
     __tablename__ = "eval_reports"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, server_default="gen_random_uuid()")
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
     name = Column(Text, nullable=False)
     faithfulness = Column(Float, nullable=True)
     answer_relevancy = Column(Float, nullable=True)
