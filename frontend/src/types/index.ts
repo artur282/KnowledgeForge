@@ -1,6 +1,7 @@
 export interface DocumentResponse {
   id: string
   filename: string
+  content_hash?: string
   status: string
   uploaded_at: string
 }
