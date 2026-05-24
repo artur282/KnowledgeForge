@@ -1,4 +1,15 @@
 services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - app
+    networks:
+      - backend
+
   postgres:
     image: pgvector/pgvector:pg16
     ports:
@@ -14,6 +25,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    networks:
+      - backend
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
@@ -30,9 +43,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - backend
 
   langfuse:
-    image: ghcr.io/langfuse/langfuse:latest
+    image: ghcr.io/langfuse/langfuse:2
     ports:
       - "3000:3000"
     depends_on:
@@ -41,6 +56,8 @@ services:
       - DATABASE_URL=postgresql://langfuse:langfuse@langfuse-db:5432/langfuse
       - NEXTAUTH_SECRET=langfuse_secret_change_in_production
       - SALT=langfuse_salt_change_in_production
+    networks:
+      - backend
 
   langfuse-db:
     image: postgres:16
@@ -48,11 +65,14 @@ services:
       POSTGRES_USER: langfuse
       POSTGRES_PASSWORD: langfuse
       POSTGRES_DB: langfuse
+    networks:
+      - backend
 
   app:
     build:
       context: .
       dockerfile: Dockerfile
+      target: development
     ports:
       - "8000:8000"
     depends_on:
@@ -72,7 +92,34 @@ services:
       - ./src:/app/src
       - ./alembic:/app/alembic
       - ./alembic.ini:/app/alembic.ini
+    networks:
+      - backend
+
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: test
+    depends_on:
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://knowledgeforge:kf_secret@postgres:5432/knowledgeforge
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - OPENAI_API_KEY=sk-test-key
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./pyproject.toml:/app/pyproject.toml
+    networks:
+      - backend
 
 volumes:
   pgdata:
   esdata:
+
+networks:
+  backend:
+    driver: bridge
