@@ -2,7 +2,7 @@ export interface DocumentResponse {
   id: string
   filename: string
   content_hash?: string
-  status: string
+  status: "pending" | "processing" | "ready" | "error"
   uploaded_at: string
 }
 

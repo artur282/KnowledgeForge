@@ -1,5 +1,6 @@
 """Ingestion service: parse, chunk, embed, and dual-write."""
 
+import asyncio
 import logging
 from uuid import UUID
 
@@ -15,9 +16,6 @@ from knowledgeforge.ingestion.parsers import compute_hash, parse_document
 from knowledgeforge.ingestion.repositories import DocumentChunkRepository, DocumentRepository
 
 logger = logging.getLogger(__name__)
-
-CHUNK_SIZE = 500
-CHUNK_OVERLAP = 50
 
 
 class IngestionService:
@@ -35,14 +33,35 @@ class IngestionService:
         self.chunk_repo = DocumentChunkRepository(session)
         self.es_client = es_client
         self.settings = settings
-        self.text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=settings.chunk_size,
-            chunk_overlap=settings.chunk_overlap,
-        )
+        self.text_splitter = self._create_text_splitter(settings)
         self.embeddings = embeddings or OpenAIEmbeddings(
             model=settings.embedding_model,
             openai_api_key=settings.openai_api_key,
             base_url=settings.openai_base_url,
+        )
+
+    @staticmethod
+    def _create_text_splitter(settings: Settings):
+        """Create text splitter based on settings."""
+        if settings.use_semantic_splitter:
+            try:
+                from langchain_experimental.text_splitter import SemanticChunker
+
+                embeddings = OpenAIEmbeddings(
+                    model=settings.embedding_model,
+                    openai_api_key=settings.openai_api_key,
+                    base_url=settings.openai_base_url,
+                )
+                return SemanticChunker(
+                    embeddings,
+                    breakpoint_threshold_type="percentile",
+                )
+            except ImportError:
+                pass
+
+        return RecursiveCharacterTextSplitter(
+            chunk_size=settings.chunk_size,
+            chunk_overlap=settings.chunk_overlap,
         )
 
     async def create_document(self, file_bytes: bytes, filename: str) -> UUID:
@@ -55,7 +74,6 @@ class IngestionService:
             return existing.id
 
         doc = await self.doc_repo.create(filename, content_hash)
-        await self.session.commit()
         return doc.id
 
     async def process_existing(self, doc_id: UUID, file_bytes: bytes, filename: str) -> UUID:
@@ -63,7 +81,7 @@ class IngestionService:
         await self.doc_repo.update_status(doc_id, "processing")
 
         try:
-            text = parse_document(file_bytes, filename)
+            text = await asyncio.to_thread(parse_document, file_bytes, filename)
             chunks = self.text_splitter.split_text(text)
             chunk_embeddings = await self.embeddings.aembed_documents(chunks)
 
@@ -91,15 +109,6 @@ class IngestionService:
 
         return doc_id
 
-    async def process(self, file_bytes: bytes, filename: str) -> UUID:
-        """Full ingestion pipeline (synchronous, for backward compatibility)."""
-        content_hash = compute_hash(file_bytes)
-        existing = await self._get_by_hash(content_hash)
-        if existing:
-            return existing.id
-        doc = await self.doc_repo.create(filename, content_hash)
-        return await self.process_existing(doc.id, file_bytes, filename)
-
     async def _get_by_hash(self, content_hash: str):
         """Get document by content hash."""
         result = await self.doc_repo.session.execute(select(Document).where(Document.content_hash == content_hash))
@@ -118,6 +127,7 @@ class IngestionService:
                         "document_id": str(doc_id),
                         "chunk_index": chunk["chunk_index"],
                         "content": chunk["content"],
+                        "content_suggest": chunk["content"][:200],
                         "filename": filename,
                         "metadata": chunk["metadata"],
                     },

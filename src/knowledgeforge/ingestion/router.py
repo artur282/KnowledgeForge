@@ -40,11 +40,12 @@ async def _process_in_background(
     doc_id: UUID,
     file_bytes: bytes,
     filename: str,
+    embeddings=None,
 ) -> None:
     """Process document in background with its own session."""
     async with session_factory() as session:
         try:
-            service = IngestionService(session, es_client, settings)
+            service = IngestionService(session, es_client, settings, embeddings=embeddings)
             doc = await service.doc_repo.get_by_id(doc_id)
             if doc and doc.status in ("ready", "processing"):
                 return
@@ -83,6 +84,7 @@ async def upload_document(
         doc_id,
         file_bytes,
         filename,
+        embeddings=request.app.state.embeddings,
     )
 
     return DocumentUploadResponse(document_id=doc_id, status="queued")

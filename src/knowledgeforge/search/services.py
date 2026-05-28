@@ -1,14 +1,13 @@
 """Hybrid search service combining BM25 and semantic search with RRF."""
 
 import logging
-import re
 from uuid import UUID
 
 from elasticsearch import AsyncElasticsearch
-from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from knowledgeforge.config import Settings
+from knowledgeforge.search.repositories import SearchRepository
 from knowledgeforge.search.schemas import SearchResult
 
 logger = logging.getLogger(__name__)
@@ -25,11 +24,13 @@ class HybridSearchService:
         es_client: AsyncElasticsearch,
         settings: Settings,
         embeddings=None,
+        repository: SearchRepository | None = None,
     ) -> None:
         self.session = session
         self.es_client = es_client
         self.settings = settings
         self._embeddings = embeddings
+        self._repository = repository or SearchRepository(session)
 
     async def search(self, query: str, k: int = 10, filters: dict | None = None) -> list[SearchResult]:
         """Execute hybrid search and return fused results."""
@@ -42,7 +43,7 @@ class HybridSearchService:
 
         fused = self._rrf_fusion(bm25_results, semantic_results)
 
-        return fused[:k]
+        return await self._rerank(query, fused, top_k=k)
 
     async def _bm25_search(self, query: str, k: int, filters: dict | None) -> list[dict]:
         """Search Elasticsearch with BM25."""
@@ -61,7 +62,7 @@ class HybridSearchService:
             es_query["query"] = {
                 "bool": {
                     "must": [{"multi_match": {"query": query, "fields": ["content"], "type": "best_fields"}}],
-                    "filter": [{"term": {f"metadata.{k}": v}} for k, v in filters.items()],
+                    "filter": [{"term": {f"metadata.{fk}": fv}} for fk, fv in filters.items()],
                 }
             }
 
@@ -98,41 +99,22 @@ class HybridSearchService:
             )
 
         query_embedding = await self._embeddings.aembed_query(query)
-        embedding_str = f"[{','.join(str(x) for x in query_embedding)}]"
-
-        sql = """
-            SELECT dc.id, dc.document_id, dc.chunk_index, dc.content,
-                   dc.metadata, d.filename,
-                   1 - (dc.embedding <=> :embedding) AS similarity
-            FROM document_chunks dc
-            JOIN documents d ON dc.document_id = d.id
-            WHERE dc.embedding IS NOT NULL
-        """
-        params = {"embedding": embedding_str}
-
-        if filters:
-            for key, value in filters.items():
-                if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", key):
-                    continue
-                sql += f" AND dc.metadata->>'{key}' = :filter_{key}"
-                params[f"filter_{key}"] = str(value)
-
-        sql += " ORDER BY similarity DESC LIMIT :limit"
-        params["limit"] = k
-
-        result = await self.session.execute(text(sql), params)
-        rows = result.fetchall()
+        raw_results = await self._repository.semantic_search(
+            embedding=query_embedding,
+            k=k,
+            filters=filters,
+        )
 
         return [
             {
-                "doc_id": row.document_id,
-                "chunk_index": row.chunk_index,
-                "content": row.content,
-                "score": float(row.similarity),
-                "filename": row.filename,
-                "metadata": dict(row.metadata) if row.metadata else {},
+                "doc_id": UUID(r["document_id"]),
+                "chunk_index": r["chunk_index"],
+                "content": r["content"],
+                "score": r["score"],
+                "filename": r["metadata"].get("filename", ""),
+                "metadata": r["metadata"],
             }
-            for row in rows
+            for r in raw_results
         ]
 
     def _rrf_fusion(self, bm25_results: list[dict], semantic_results: list[dict]) -> list[SearchResult]:
@@ -169,7 +151,35 @@ class HybridSearchService:
             for rrf_score, result in sorted_results
         ]
 
-    async def _get_suggestions(self, query: str) -> list[str]:
+    async def _rerank(self, query: str, results: list, top_k: int = 5) -> list:
+        """Rerank results using Cohere if available, otherwise return as-is."""
+        if not self.settings.cohere_api_key:
+            return results[:top_k]
+
+        try:
+            import cohere
+
+            co = cohere.AsyncClient(self.settings.cohere_api_key)
+
+            docs = [r.content for r in results]
+            reranked = await co.rerank(
+                query=query,
+                documents=docs,
+                top_n=top_k,
+                model="rerank-v3.5",
+            )
+
+            reranked_results = []
+            for item in reranked.results:
+                original = results[item.index]
+                original.score = item.relevance_score
+                reranked_results.append(original)
+
+            return reranked_results
+        except Exception:
+            return results[:top_k]
+
+    async def get_suggestions(self, query: str) -> list[str]:
         """Get autocomplete suggestions from Elasticsearch."""
         response = await self.es_client.search(
             index=self.settings.elasticsearch_index,

@@ -4,7 +4,7 @@ import logging
 from uuid import UUID
 
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnablePassthrough
+from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 from langchain_openai import ChatOpenAI
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -52,6 +52,8 @@ class RAGChatService:
             temperature=0,
         )
 
+        self._last_results: list = []
+
         self.callbacks = []
         if settings.langfuse_public_key:
             from langfuse.callback import CallbackHandler
@@ -60,7 +62,7 @@ class RAGChatService:
 
         self.chain = (
             {
-                "context": self._retrieve_and_format | RunnablePassthrough(),
+                "context": RunnableLambda(self._retrieve_and_format),
                 "question": RunnablePassthrough(),
             }
             | ChatPromptTemplate.from_messages(
@@ -72,10 +74,10 @@ class RAGChatService:
             | self.llm
         )
 
-    async def _retrieve_and_format(self, input_data: dict) -> str:
-        """Retrieve chunks and format as context string."""
-        question = input_data.get("question", "") if isinstance(input_data, dict) else input_data
+    async def _retrieve_and_format(self, question: str) -> str:
+        """Retrieve chunks, store results, and format as context string."""
         results = await self.search_service.search(query=question, k=5)
+        self._last_results = results
         context_parts = [f"[Document: {r.filename}] (chunk {r.chunk_index})\n{r.content}" for r in results]
         return "\n\n---\n\n".join(context_parts) if context_parts else "No relevant context found."
 
@@ -101,15 +103,15 @@ class RAGChatService:
             content=question,
         )
 
+        self._last_results = []
         response = await self.chain.ainvoke(
-            {"question": question},
+            question,
             config={"callbacks": self.callbacks},
         )
 
         answer = response.content if hasattr(response, "content") else str(response)
 
-        results = await self.search_service.search(query=question, k=5)
-        sources = [{"doc_id": r.doc_id, "chunk_index": r.chunk_index, "score": r.score} for r in results]
+        sources = [{"doc_id": r.doc_id, "chunk_index": r.chunk_index, "score": r.score} for r in self._last_results]
 
         await self.message_repo.create(
             session_id=chat_session.id,

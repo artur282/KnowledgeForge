@@ -17,12 +17,11 @@ class Settings(BaseSettings):
     elasticsearch_index: str = "knowledgeforge"
     chunk_size: int = 500
     chunk_overlap: int = 50
+    cohere_api_key: str = ""
+    use_semantic_splitter: bool = False
 
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
     )
-
-
-settings = Settings()

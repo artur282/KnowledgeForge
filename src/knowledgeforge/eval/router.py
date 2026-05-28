@@ -2,7 +2,7 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from knowledgeforge.db.deps import get_session, get_settings
@@ -45,11 +45,15 @@ async def run_evaluation(
     request: EvalRunRequest = EvalRunRequest(),
     service: RAGASEvalService = Depends(get_eval_service),
 ):
-    result = await service.run_evaluation(
-        name=request.name,
-        dataset_path=request.dataset_path,
-    )
-    return EvalRunResponse(**result)
+    try:
+        result = await service.run_evaluation(
+            name=request.name,
+            dataset_path=request.dataset_path,
+        )
+        return EvalRunResponse(**result)
+    except Exception:
+        logger.exception("Evaluation failed")
+        raise HTTPException(status_code=500, detail="Evaluation failed")
 
 
 @router.get(
@@ -60,6 +64,10 @@ async def run_evaluation(
 async def list_eval_reports(
     session: AsyncSession = Depends(get_session),
 ):
-    eval_repo = EvalReportRepository(session)
-    reports = await eval_repo.get_all()
-    return EvalReportsResponse(reports=[EvalReportItem.model_validate(r) for r in reports])
+    try:
+        eval_repo = EvalReportRepository(session)
+        reports = await eval_repo.get_all()
+        return EvalReportsResponse(reports=[EvalReportItem.model_validate(r) for r in reports])
+    except Exception:
+        logger.exception("Failed to list reports")
+        raise HTTPException(status_code=500, detail="Failed to list reports")

@@ -1,6 +1,8 @@
 """Document parsers for PDF, Markdown, and HTML files."""
 
 import hashlib
+import os
+import tempfile
 from enum import Enum
 
 from langchain_community.document_loaders import PyPDFLoader, UnstructuredHTMLLoader
@@ -39,24 +41,28 @@ def parse_document(file_bytes: bytes, filename: str) -> str:
     doc_type = detect_type(filename)
 
     if doc_type == DocumentType.PDF:
-        import tempfile
-
-        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
-            f.write(file_bytes)
-            f.flush()
-            loader = PyPDFLoader(f.name)
-            docs = loader.load()
-        return "\n\n".join(doc.page_content for doc in docs)
+        tmp_path = None
+        try:
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
+                f.write(file_bytes)
+                tmp_path = f.name
+            docs = PyPDFLoader(tmp_path).load()
+            return "\n\n".join(doc.page_content for doc in docs)
+        finally:
+            if tmp_path and os.path.exists(tmp_path):
+                os.unlink(tmp_path)
 
     if doc_type == DocumentType.HTML:
-        import tempfile
-
-        with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="wb") as f:
-            f.write(file_bytes)
-            f.flush()
-            loader = UnstructuredHTMLLoader(f.name)
-            docs = loader.load()
-        return "\n\n".join(doc.page_content for doc in docs)
+        tmp_path = None
+        try:
+            with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="wb") as f:
+                f.write(file_bytes)
+                tmp_path = f.name
+            docs = UnstructuredHTMLLoader(tmp_path).load()
+            return "\n\n".join(doc.page_content for doc in docs)
+        finally:
+            if tmp_path and os.path.exists(tmp_path):
+                os.unlink(tmp_path)
 
     text = file_bytes.decode("utf-8")
     return text

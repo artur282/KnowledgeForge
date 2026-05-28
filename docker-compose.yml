@@ -20,13 +20,13 @@ services:
   postgres:
     image: pgvector/pgvector:pg16
     environment:
-      POSTGRES_USER: knowledgeforge
-      POSTGRES_PASSWORD: kf_secret
-      POSTGRES_DB: knowledgeforge
+      POSTGRES_USER: ${POSTGRES_USER:-knowledgeforge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kf_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-knowledgeforge}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U knowledgeforge"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-knowledgeforge}"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -43,12 +43,13 @@ services:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
     environment:
       - discovery.type=single-node
-      - xpack.security.enabled=false
+      - xpack.security.enabled=true
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:-changeme_elastic}
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
     volumes:
       - esdata:/usr/share/elasticsearch/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f -u elastic:${ELASTIC_PASSWORD:-changeme_elastic} http://localhost:9200/_cluster/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -69,9 +70,15 @@ services:
       langfuse-db:
         condition: service_healthy
     environment:
-      - DATABASE_URL=postgresql://langfuse:langfuse@langfuse-db:5432/langfuse
-      - NEXTAUTH_SECRET=langfuse_secret_change_in_production
-      - SALT=langfuse_salt_change_in_production
+      - DATABASE_URL=postgresql://${LANGFUSE_DB_USER:-langfuse}:${LANGFUSE_DB_PASSWORD:-langfuse}@langfuse-db:5432/${LANGFUSE_DB_NAME:-langfuse}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-langfuse_secret_change_in_production}
+      - SALT=${SALT:-langfuse_salt_change_in_production}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/public/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     restart: unless-stopped
     deploy:
       resources:
@@ -84,13 +91,13 @@ services:
   langfuse-db:
     image: postgres:16
     environment:
-      POSTGRES_USER: langfuse
-      POSTGRES_PASSWORD: langfuse
-      POSTGRES_DB: langfuse
+      POSTGRES_USER: ${LANGFUSE_DB_USER:-langfuse}
+      POSTGRES_PASSWORD: ${LANGFUSE_DB_PASSWORD:-langfuse}
+      POSTGRES_DB: ${LANGFUSE_DB_NAME:-langfuse}
     volumes:
       - langfusedata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U langfuse"]
+      test: ["CMD-SHELL", "pg_isready -U ${LANGFUSE_DB_USER:-langfuse}"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -116,7 +123,7 @@ services:
       elasticsearch:
         condition: service_healthy
       langfuse:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
     deploy:
       resources:
@@ -126,13 +133,19 @@ services:
     env_file:
       - .env
     environment:
-      - DATABASE_URL=postgresql+asyncpg://knowledgeforge:kf_secret@postgres:5432/knowledgeforge
-      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-knowledgeforge}:${POSTGRES_PASSWORD:-kf_secret}@postgres:5432/${POSTGRES_DB:-knowledgeforge}
+      - ELASTICSEARCH_URL=http://elastic:${ELASTIC_PASSWORD:-changeme_elastic}@elasticsearch:9200
       - LANGFUSE_HOST=http://langfuse:3000
     volumes:
       - ./src:/app/src
       - ./alembic:/app/alembic
       - ./alembic.ini:/app/alembic.ini
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     networks:
       - frontend
       - backend
@@ -149,8 +162,8 @@ services:
       elasticsearch:
         condition: service_healthy
     environment:
-      - DATABASE_URL=postgresql+asyncpg://knowledgeforge:kf_secret@postgres:5432/knowledgeforge
-      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-knowledgeforge}:${POSTGRES_PASSWORD:-kf_secret}@postgres:5432/${POSTGRES_DB:-knowledgeforge}
+      - ELASTICSEARCH_URL=http://elastic:${ELASTIC_PASSWORD:-changeme_elastic}@elasticsearch:9200
       - OPENAI_API_KEY=sk-test-key
     volumes:
       - ./src:/app/src

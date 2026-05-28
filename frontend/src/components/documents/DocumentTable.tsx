@@ -31,7 +31,7 @@ export function DocumentTable({ documents, onDelete, loading }: DocumentTablePro
           </thead>
           <tbody>
             {[1, 2, 3].map((i) => (
-              <tr key={i} className="border-b border-border-ghost">
+              <tr key={`skeleton-${i}`} className="border-b border-border-ghost">
                 <td className="px-4 py-3"><div className="h-4 w-40 bg-bg-surface-hover rounded animate-pulse" /></td>
                 <td className="px-4 py-3"><div className="h-4 w-16 bg-bg-surface-hover rounded animate-pulse" /></td>
                 <td className="px-4 py-3"><div className="h-4 w-24 bg-bg-surface-hover rounded animate-pulse" /></td>

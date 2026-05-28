@@ -1,4 +1,4 @@
-import { useMemo } from "react"
+import React from "react"
 import type { SourceInfo } from "../../types"
 import { SourceBadge } from "./SourceBadge"
 
@@ -10,7 +10,7 @@ interface ChatBubbleProps {
 
 export function ChatBubble({ role, content, sources }: ChatBubbleProps) {
   const isUser = role === "user"
-  const timestamp = useMemo(() => new Date().toLocaleTimeString("en-US", {
+  const timestamp = React.useMemo(() => new Date().toLocaleTimeString("en-US", {
     hour12: false,
     hour: "2-digit",
     minute: "2-digit",

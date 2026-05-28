@@ -2,7 +2,7 @@
 
 import logging
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
 logger = logging.getLogger(__name__)
 
@@ -13,10 +13,9 @@ router = APIRouter(prefix="/mcp", tags=["mcp"])
     "/tools",
     operation_id="listMcpTools",
 )
-async def list_mcp_tools():
+async def list_mcp_tools(request: Request):
     """List available MCP tools."""
-    from knowledgeforge.mcp.tools import mcp
-
+    mcp = request.app.state.mcp
     tools = mcp._tool_manager.list_tools()
     return [
         {

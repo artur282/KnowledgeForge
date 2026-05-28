@@ -16,13 +16,6 @@ class EvalRunRequest(BaseModel):
     )
 
 
-class EvalMetricResult(BaseModel):
-    """Single metric result."""
-
-    name: str
-    score: float
-
-
 class EvalRunResponse(BaseModel):
     """Response schema for evaluation run."""
 

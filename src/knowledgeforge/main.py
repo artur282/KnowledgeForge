@@ -57,6 +57,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Database engine initialized")
     logger.info("Elasticsearch URL: %s", settings.elasticsearch_url)
 
+    mount_mcp_server(app)
+
     yield
 
     logger.info("Shutting down KnowledgeForge...")
@@ -86,6 +88,7 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(SQLAlchemyError)
     async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
+        logger.exception("Database error: %s", exc)
         return JSONResponse(
             status_code=500,
             content={"detail": "Database error occurred"},
@@ -93,6 +96,7 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(Exception)
     async def general_exception_handler(request: Request, exc: Exception):
+        logger.exception("Unhandled exception: %s", exc)
         return JSONResponse(
             status_code=500,
             content={"detail": "Internal server error"},
@@ -111,8 +115,6 @@ def create_app() -> FastAPI:
     app.include_router(search_router)
     app.include_router(chat_router)
     app.include_router(mcp_router)
-
-    mount_mcp_server(app)
 
     return app
 

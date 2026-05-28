@@ -13,7 +13,7 @@ export function Search() {
     } else {
       setSuggestions([])
     }
-  }, [debouncedQuery, fetchSuggestions, setSuggestions])
+  }, [debouncedQuery, fetchSuggestions])
 
   return (
     <div className="animate-reveal-up">

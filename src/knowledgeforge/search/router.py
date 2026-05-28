@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from knowledgeforge.db.deps import get_session
+from knowledgeforge.search.repositories import SearchRepository
 from knowledgeforge.search.schemas import SearchRequest, SearchResponse, SuggestResponse
 from knowledgeforge.search.services import HybridSearchService
 
@@ -19,11 +20,16 @@ def get_search_service(
     session: AsyncSession = Depends(get_session),
 ) -> HybridSearchService:
     """Dependency injection for HybridSearchService."""
+    settings = request.app.state.settings
+    es_client = request.app.state.es_client
+    embeddings = request.app.state.embeddings
+    repo = SearchRepository(session)
     return HybridSearchService(
         session,
-        request.app.state.es_client,
-        settings=request.app.state.settings,
-        embeddings=request.app.state.embeddings,
+        es_client,
+        settings,
+        embeddings=embeddings,
+        repository=repo,
     )
 
 
@@ -59,5 +65,9 @@ async def search_suggestions(
     service: HybridSearchService = Depends(get_search_service),
 ):
     """Get autocomplete suggestions from Elasticsearch."""
-    suggestions = await service._get_suggestions(q)
-    return SuggestResponse(suggestions=suggestions)
+    try:
+        suggestions = await service.get_suggestions(q)
+        return SuggestResponse(suggestions=suggestions)
+    except Exception:
+        logger.exception("Suggestion lookup failed")
+        raise HTTPException(status_code=503, detail="Suggestion service unavailable") from None

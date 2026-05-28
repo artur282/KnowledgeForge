@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom"
+import { Outlet, useLocation } from "react-router-dom"
 import { ErrorBoundary, type FallbackProps } from "react-error-boundary"
 import { Navbar } from "./Navbar"
 import { Sidebar } from "./Sidebar"
@@ -20,13 +20,15 @@ function ErrorFallback({ error }: FallbackProps) {
 }
 
 export function Layout() {
+  const location = useLocation()
+
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
       <div className="flex flex-1">
         <Sidebar />
         <main className="flex-1 p-8 overflow-auto">
-          <ErrorBoundary FallbackComponent={ErrorFallback}>
+          <ErrorBoundary FallbackComponent={ErrorFallback} resetKeys={[location.pathname]}>
             <Outlet />
           </ErrorBoundary>
         </main>
