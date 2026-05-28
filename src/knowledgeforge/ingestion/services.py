@@ -28,6 +28,7 @@ class IngestionService:
         session: AsyncSession,
         es_client: AsyncElasticsearch,
         settings: Settings,
+        embeddings: OpenAIEmbeddings | None = None,
     ) -> None:
         self.session = session
         self.doc_repo = DocumentRepository(session)
@@ -35,11 +36,11 @@ class IngestionService:
         self.es_client = es_client
         self.settings = settings
         self.text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=CHUNK_SIZE,
-            chunk_overlap=CHUNK_OVERLAP,
+            chunk_size=settings.chunk_size,
+            chunk_overlap=settings.chunk_overlap,
         )
-        self.embeddings = OpenAIEmbeddings(
-            model="text-embedding-3-small",
+        self.embeddings = embeddings or OpenAIEmbeddings(
+            model=settings.embedding_model,
             openai_api_key=settings.openai_api_key,
             base_url=settings.openai_base_url,
         )
@@ -111,7 +112,7 @@ class IngestionService:
         async def chunk_generator():
             for chunk in chunks:
                 yield {
-                    "_index": "knowledgeforge",
+                    "_index": self.settings.elasticsearch_index,
                     "_id": f"{doc_id}-{chunk['chunk_index']}",
                     "_source": {
                         "document_id": str(doc_id),

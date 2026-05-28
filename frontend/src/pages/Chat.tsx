@@ -4,7 +4,7 @@ import { ChatLog } from "../components/chat/ChatLog"
 import { ChatInput } from "../components/chat/ChatInput"
 
 export function Chat() {
-  const { messages, loading, sessionId, send } = useChat()
+  const { messages, loading, error, sessionId, send } = useChat()
 
   return (
     <div
@@ -23,6 +23,12 @@ export function Chat() {
           )}
         </div>
       </div>
+
+      {error && (
+        <div className="mb-4 px-4 py-2 bg-error/10 border border-error/20 rounded text-error text-xs font-body">
+          [!] {error}
+        </div>
+      )}
 
       <PanelCard index="01" title="TERMINAL" className="flex flex-col flex-1">
         <ChatLog messages={messages} loading={loading} />

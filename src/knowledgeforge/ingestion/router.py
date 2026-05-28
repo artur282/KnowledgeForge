@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from knowledgeforge.db.deps import get_session, get_settings
 from knowledgeforge.ingestion.repositories import DocumentRepository
 from knowledgeforge.ingestion.schemas import DocumentResponse, DocumentUploadResponse
 from knowledgeforge.ingestion.services import IngestionService
@@ -15,27 +16,14 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 
-async def get_session(request: Request) -> AsyncSession:
-    """Get database session from app state."""
-    session_factory = request.app.state.session_factory
-    async with session_factory() as session:
-        try:
-            yield session
-            await session.commit()
-        finally:
-            await session.close()
-
-
 def get_ingestion_service(
     request: Request,
     session: AsyncSession = Depends(get_session),
+    settings=Depends(get_settings),
 ) -> IngestionService:
     """Dependency injection for IngestionService."""
-    from knowledgeforge.config import Settings
-
-    settings = Settings()
     es_client = request.app.state.es_client
-    return IngestionService(session, es_client, settings)
+    return IngestionService(session, es_client, settings, embeddings=request.app.state.embeddings)
 
 
 def get_document_repo(
@@ -55,11 +43,18 @@ async def _process_in_background(
 ) -> None:
     """Process document in background with its own session."""
     async with session_factory() as session:
-        service = IngestionService(session, es_client, settings)
-        doc = await service.doc_repo.get_by_id(doc_id)
-        if doc and doc.status in ("ready", "processing"):
-            return
-        await service.process_existing(doc_id, file_bytes, filename)
+        try:
+            service = IngestionService(session, es_client, settings)
+            doc = await service.doc_repo.get_by_id(doc_id)
+            if doc and doc.status in ("ready", "processing"):
+                return
+            await service.process_existing(doc_id, file_bytes, filename)
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
 
 
 @router.post(
@@ -75,19 +70,16 @@ async def upload_document(
     ingestion_svc: IngestionService = Depends(get_ingestion_service),
 ):
     """Upload a document for async ingestion."""
-    from knowledgeforge.config import Settings
-
     file_bytes = await file.read()
     filename = file.filename or "unknown"
 
     doc_id = await ingestion_svc.create_document(file_bytes, filename)
 
-    settings = Settings()
     background_tasks.add_task(
         _process_in_background,
         request.app.state.session_factory,
         request.app.state.es_client,
-        settings,
+        request.app.state.settings,
         doc_id,
         file_bytes,
         filename,
@@ -125,4 +117,3 @@ async def delete_document(
     deleted = await repo.delete(doc_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Document not found")
-    return None

@@ -1,12 +1,14 @@
 """Hybrid search service combining BM25 and semantic search with RRF."""
 
 import logging
+import re
 from uuid import UUID
 
 from elasticsearch import AsyncElasticsearch
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from knowledgeforge.config import Settings
 from knowledgeforge.search.schemas import SearchResult
 
 logger = logging.getLogger(__name__)
@@ -21,9 +23,13 @@ class HybridSearchService:
         self,
         session: AsyncSession,
         es_client: AsyncElasticsearch,
+        settings: Settings,
+        embeddings=None,
     ) -> None:
         self.session = session
         self.es_client = es_client
+        self.settings = settings
+        self._embeddings = embeddings
 
     async def search(self, query: str, k: int = 10, filters: dict | None = None) -> list[SearchResult]:
         """Execute hybrid search and return fused results."""
@@ -59,7 +65,7 @@ class HybridSearchService:
                 }
             }
 
-        response = await self.es_client.search(index="knowledgeforge", body=es_query)
+        response = await self.es_client.search(index=self.settings.elasticsearch_index, body=es_query)
 
         results = []
         for hit in response["hits"]["hits"]:
@@ -79,18 +85,19 @@ class HybridSearchService:
 
     async def _semantic_search(self, query: str, k: int, filters: dict | None) -> list[dict]:
         """Search pgvector with cosine similarity."""
-        from langchain_openai import OpenAIEmbeddings
+        if self._embeddings is None:
+            from knowledgeforge.config import Settings
 
-        from knowledgeforge.config import Settings
+            settings = Settings()
+            from langchain_openai import OpenAIEmbeddings
 
-        settings = Settings()
-        embeddings = OpenAIEmbeddings(
-            model="text-embedding-3-small",
-            openai_api_key=settings.openai_api_key,
-            base_url=settings.openai_base_url,
-        )
+            self._embeddings = OpenAIEmbeddings(
+                model=settings.embedding_model,
+                openai_api_key=settings.openai_api_key,
+                base_url=settings.openai_base_url,
+            )
 
-        query_embedding = await embeddings.aembed_query(query)
+        query_embedding = await self._embeddings.aembed_query(query)
         embedding_str = f"[{','.join(str(x) for x in query_embedding)}]"
 
         sql = """
@@ -105,6 +112,8 @@ class HybridSearchService:
 
         if filters:
             for key, value in filters.items():
+                if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", key):
+                    continue
                 sql += f" AND dc.metadata->>'{key}' = :filter_{key}"
                 params[f"filter_{key}"] = str(value)
 
@@ -163,7 +172,7 @@ class HybridSearchService:
     async def _get_suggestions(self, query: str) -> list[str]:
         """Get autocomplete suggestions from Elasticsearch."""
         response = await self.es_client.search(
-            index="knowledgeforge",
+            index=self.settings.elasticsearch_index,
             body={
                 "suggest": {
                     "content-suggest": {

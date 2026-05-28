@@ -1,5 +1,5 @@
 import { apiRequest } from "../lib/api"
-import type { DocumentResponse, DocumentUploadResponse } from "../types"
+import type { DocumentResponse, DocumentUploadResponse, DocumentListResponse } from "../types"
 
 export function uploadDocument(file: File) {
   const formData = new FormData()
@@ -16,4 +16,8 @@ export function getDocument(id: string) {
 
 export function deleteDocument(id: string) {
   return apiRequest<void>(`/documents/${id}`, { method: "DELETE" })
+}
+
+export function listDocuments() {
+  return apiRequest<DocumentListResponse>("/documents")
 }

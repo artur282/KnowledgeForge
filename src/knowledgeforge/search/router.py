@@ -2,9 +2,10 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from knowledgeforge.db.deps import get_session
 from knowledgeforge.search.schemas import SearchRequest, SearchResponse, SuggestResponse
 from knowledgeforge.search.services import HybridSearchService
 
@@ -13,22 +14,17 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/search", tags=["search"])
 
 
-async def get_session(request: Request) -> AsyncSession:
-    """Get database session from app state."""
-    session_factory = request.app.state.session_factory
-    async with session_factory() as session:
-        try:
-            yield session
-        finally:
-            await session.close()
-
-
 def get_search_service(
     request: Request,
     session: AsyncSession = Depends(get_session),
 ) -> HybridSearchService:
     """Dependency injection for HybridSearchService."""
-    return HybridSearchService(session, request.app.state.es_client)
+    return HybridSearchService(
+        session,
+        request.app.state.es_client,
+        settings=request.app.state.settings,
+        embeddings=request.app.state.embeddings,
+    )
 
 
 @router.post(
@@ -41,12 +37,16 @@ async def hybrid_search(
     service: HybridSearchService = Depends(get_search_service),
 ):
     """Execute hybrid search with BM25 + semantic fusion."""
-    results = await service.search(
-        query=request.query,
-        k=request.k,
-        filters=request.filters,
-    )
-    return SearchResponse(results=results, total=len(results))
+    try:
+        results = await service.search(
+            query=request.query,
+            k=request.k,
+            filters=request.filters,
+        )
+        return SearchResponse(results=results, total=len(results))
+    except Exception:
+        logger.exception("Search failed")
+        raise HTTPException(status_code=503, detail="Search service unavailable") from None
 
 
 @router.get(

@@ -40,16 +40,14 @@ export function ChatLog({ messages, loading }: ChatLogProps) {
 
   return (
     <div className="flex-1 overflow-y-auto space-y-4 p-4">
-      {messages.map(function renderMessage(msg, i) {
-        return (
-          <ChatBubble
-            key={i}
-            role={msg.role}
-            content={msg.content}
-            sources={msg.sources}
-          />
-        )
-      })}
+      {messages.map((msg, i) => (
+        <ChatBubble
+          key={`${msg.role}-${i}-${msg.content.slice(0, 20)}`}
+          role={msg.role}
+          content={msg.content}
+          sources={msg.sources}
+        />
+      ))}
       {loading && (
         <div className="flex items-start gap-3">
           <div className="bg-bg-surface border border-border-subtle rounded-md px-4 py-3">

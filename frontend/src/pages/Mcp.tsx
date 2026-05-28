@@ -6,12 +6,16 @@ import type { McpTool } from "../types"
 export function Mcp() {
   const [tools, setTools] = useState<McpTool[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(
     function loadTools() {
       listMcpTools()
         .then(function handleSuccess(toolsList) {
           setTools(toolsList)
+        })
+        .catch(function handleError(err) {
+          setError(err instanceof Error ? err.message : "Failed to load MCP tools")
         })
         .finally(function handleFinally() {
           setLoading(false)
@@ -30,6 +34,12 @@ export function Mcp() {
           Model Context Protocol -- registered server tools
         </span>
       </div>
+
+      {error && (
+        <div className="mb-4 px-4 py-2 bg-error/10 border border-error/20 rounded text-error text-xs font-body">
+          [!] {error}
+        </div>
+      )}
 
       <PanelCard index="01" title="REGISTERED_TOOLS">
         {loading ? (

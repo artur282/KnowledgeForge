@@ -5,6 +5,7 @@ import logging
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from knowledgeforge.db.deps import get_session, get_settings
 from knowledgeforge.eval.repositories import EvalReportRepository
 from knowledgeforge.eval.schemas import (
     EvalReportItem,
@@ -19,23 +20,20 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/eval", tags=["evaluation"])
 
 
-async def get_session(request: Request) -> AsyncSession:
-    session_factory = request.app.state.session_factory
-    async with session_factory() as session:
-        try:
-            yield session
-        finally:
-            await session.close()
-
-
 def get_eval_service(
+    request: Request,
     session: AsyncSession = Depends(get_session),
+    settings=Depends(get_settings),
 ) -> RAGASEvalService:
-    from knowledgeforge.config import Settings
-
-    settings = Settings()
     eval_repo = EvalReportRepository(session)
-    return RAGASEvalService(settings, eval_repo)
+    return RAGASEvalService(
+        settings,
+        eval_repo,
+        session_factory=request.app.state.session_factory,
+        es_client=request.app.state.es_client,
+        embeddings=request.app.state.embeddings,
+        llm=request.app.state.llm,
+    )
 
 
 @router.post(

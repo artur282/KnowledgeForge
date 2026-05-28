@@ -27,7 +27,7 @@ async def search_knowledge(query: str, k: int = 10) -> str:
     session_factory = app.state.session_factory
 
     async with session_factory() as session:
-        search_service = HybridSearchService(session, app.state.es_client)
+        search_service = HybridSearchService(session, app.state.es_client, settings=app.state.settings)
         results = await search_service.search(query=query, k=min(k, 100))
 
     if not results:
@@ -52,7 +52,6 @@ async def summarize_document(doc_id: str) -> str:
     """
     from langchain_core.prompts import ChatPromptTemplate
     from langchain_openai import ChatOpenAI
-    from langfuse.langchain import CallbackHandler
     from sqlalchemy import select
 
     from knowledgeforge.config import Settings
@@ -101,11 +100,16 @@ async def summarize_document(doc_id: str) -> str:
         )
 
         chain = prompt | llm
-        langfuse_handler = CallbackHandler()
+
+        callbacks = []
+        if settings.langfuse_public_key:
+            from langfuse.callback import CallbackHandler
+
+            callbacks.append(CallbackHandler())
 
         response = await chain.ainvoke(
             {"content": full_content},
-            config={"callbacks": [langfuse_handler]},
+            config={"callbacks": callbacks},
         )
 
         return response.content

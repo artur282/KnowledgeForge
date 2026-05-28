@@ -1,3 +1,4 @@
+import { useMemo } from "react"
 import type { SourceInfo } from "../../types"
 import { SourceBadge } from "./SourceBadge"
 
@@ -9,13 +10,18 @@ interface ChatBubbleProps {
 
 export function ChatBubble({ role, content, sources }: ChatBubbleProps) {
   const isUser = role === "user"
-  const now = new Date().toLocaleTimeString("en-US", { hour12: false })
+  const timestamp = useMemo(() => new Date().toLocaleTimeString("en-US", {
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }), [])
 
   return (
     <div className={`flex gap-3 ${isUser ? "justify-end" : "justify-start"}`}>
       <div className={`max-w-[80%] ${isUser ? "order-1" : ""}`}>
         <div className="flex items-center gap-2 mb-1">
-          <span className="font-body text-2xs text-text-muted">[{now}]</span>
+          <span className="font-body text-2xs text-text-muted">[{timestamp}]</span>
           <span
             className={`font-body text-xs font-semibold ${isUser ? "text-accent-primary" : "text-info"}`}
           >

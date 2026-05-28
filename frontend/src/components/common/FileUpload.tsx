@@ -1,6 +1,25 @@
 import { useCallback, useState } from "react"
 import { Upload } from "lucide-react"
 
+const ACCEPTED_TYPES = [
+  "application/pdf",
+  "text/plain",
+  "text/markdown",
+  "text/csv",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+]
+const MAX_SIZE_MB = 50
+
+function validateFile(file: File): string | null {
+  if (ACCEPTED_TYPES.length > 0 && !ACCEPTED_TYPES.includes(file.type)) {
+    return `Unsupported file type: ${file.type || "unknown"}`
+  }
+  if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+    return `File too large: ${(file.size / 1024 / 1024).toFixed(1)}MB (max ${MAX_SIZE_MB}MB)`
+  }
+  return null
+}
+
 interface FileUploadProps {
   onUpload: (file: File) => Promise<void>
   disabled?: boolean
@@ -8,33 +27,53 @@ interface FileUploadProps {
 
 export function FileUpload({ onUpload, disabled }: FileUploadProps) {
   const [dragging, setDragging] = useState(false)
+  const [validationError, setValidationError] = useState<string | null>(null)
 
-  function handleDrag(over: boolean) {
-    return (e: React.DragEvent) => {
-      e.preventDefault()
-      setDragging(over)
-    }
-  }
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setDragging(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setDragging(false)
+  }, [])
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault()
       setDragging(false)
       const file = e.dataTransfer.files[0]
-      if (file) onUpload(file)
+      if (file) {
+        const error = validateFile(file)
+        if (error) {
+          setValidationError(error)
+          return
+        }
+        setValidationError(null)
+        onUpload(file)
+      }
     },
     [onUpload],
   )
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (file) onUpload(file)
+    if (file) {
+      const error = validateFile(file)
+      if (error) {
+        setValidationError(error)
+        return
+      }
+      setValidationError(null)
+      onUpload(file)
+    }
   }
 
   return (
     <label
-      onDragOver={handleDrag(true)}
-      onDragLeave={handleDrag(false)}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       className={`flex flex-col items-center justify-center gap-3 p-10 border-2 border-dashed rounded-lg cursor-pointer transition-all duration-150 ${
         dragging
@@ -55,6 +94,11 @@ export function FileUpload({ onUpload, disabled }: FileUploadProps) {
         onChange={handleChange}
         disabled={disabled}
       />
+      {validationError && (
+        <span className="font-body text-xs text-error mt-1">
+          {validationError}
+        </span>
+      )}
     </label>
   )
 }

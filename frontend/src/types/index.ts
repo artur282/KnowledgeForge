@@ -11,6 +11,11 @@ export interface DocumentUploadResponse {
   document_id: string | null
 }
 
+export interface DocumentListResponse {
+  documents: DocumentResponse[]
+  total: number
+}
+
 export interface SearchResult {
   doc_id: string
   chunk_index: number

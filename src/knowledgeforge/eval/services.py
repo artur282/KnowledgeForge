@@ -1,5 +1,6 @@
 """RAGAS evaluation service."""
 
+import asyncio
 import logging
 from pathlib import Path
 
@@ -30,16 +31,22 @@ class RAGASEvalService:
         self,
         settings: Settings,
         eval_repo: EvalReportRepository,
+        session_factory=None,
+        es_client=None,
+        embeddings: OpenAIEmbeddings | None = None,
+        llm: ChatOpenAI | None = None,
     ) -> None:
         self.settings = settings
         self.eval_repo = eval_repo
-        self.llm = ChatOpenAI(
-            model="nvidia/nemotron-3-nano-30b-a3b:free",
+        self.session_factory = session_factory
+        self.es_client = es_client
+        self.llm = llm or ChatOpenAI(
+            model=settings.llm_model,
             openai_api_key=settings.openai_api_key,
             base_url=settings.openai_base_url,
         )
-        self.embeddings = OpenAIEmbeddings(
-            model="text-embedding-3-small",
+        self.embeddings = embeddings or OpenAIEmbeddings(
+            model=settings.embedding_model,
             openai_api_key=settings.openai_api_key,
             base_url=settings.openai_base_url,
         )
@@ -56,14 +63,16 @@ class RAGASEvalService:
         if dataset_path:
             import json
 
-            data = json.loads(Path(dataset_path).read_text())
+            data = await asyncio.to_thread(Path(dataset_path).read_text)
+            data = json.loads(data)
             eval_dataset = Dataset.from_list(data)
         else:
             eval_dataset = Dataset.from_list(DEFAULT_EVAL_DATASET)
 
         filled_data = await self._fill_dataset(eval_dataset)
 
-        result = evaluate(
+        result = await asyncio.to_thread(
+            evaluate,
             dataset=filled_data,
             metrics=[faithfulness, answer_relevancy, context_precision],
             llm=self.llm,
@@ -84,7 +93,7 @@ class RAGASEvalService:
             results_json={k: v for k, v in scores.items() if v is not None},
         )
 
-        self._export_to_csv(result)
+        await self._export_to_csv(result)
 
         logger.info(
             "Evaluation '%s' complete: faithfulness=%.2f, answer_relevancy=%.2f, context_precision=%.2f",
@@ -108,16 +117,14 @@ class RAGASEvalService:
         to get the answer and retrieved contexts.
         """
         from knowledgeforge.chat.services import RAGChatService
-        from knowledgeforge.main import app
         from knowledgeforge.search.services import HybridSearchService
 
         filled_rows = []
         for row in dataset:
             question = row["question"]
 
-            session_factory = app.state.session_factory
-            async with session_factory() as session:
-                search_service = HybridSearchService(session, app.state.es_client)
+            async with self.session_factory() as session:
+                search_service = HybridSearchService(session, self.es_client, self.settings)
                 rag_service = RAGChatService(session, self.settings, search_service)
 
                 answer, sources, _ = await rag_service.chat(question=question)
@@ -135,11 +142,11 @@ class RAGASEvalService:
 
         return Dataset.from_list(filled_rows)
 
-    def _export_to_csv(self, result) -> None:
+    async def _export_to_csv(self, result) -> None:
         """Export evaluation results to CSV."""
 
         df = result.to_pandas()
         output_path = Path("docs") / "eval_report.csv"
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        df.to_csv(output_path, index=False)
+        await asyncio.to_thread(df.to_csv, output_path, index=False)
         logger.info("Evaluation report exported to %s", output_path)

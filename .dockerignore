@@ -15,3 +15,10 @@ proyecto-knowledgeforge.md
 frontend/node_modules/
 frontend/dist/
 frontend/.git/
+docker-compose*.yml
+Dockerfile
+Makefile
+*.log
+tmp/
+.agents/
+.opencode/

@@ -11,6 +11,12 @@ class Settings(BaseSettings):
     langfuse_host: str = "http://localhost:3000"
     langfuse_public_key: str = ""
     langfuse_secret_key: str = ""
+    cors_origins: list[str] = ["http://localhost:8080", "http://localhost:3000"]
+    llm_model: str = "nvidia/nemotron-3-nano-30b-a3b:free"
+    embedding_model: str = "text-embedding-3-small"
+    elasticsearch_index: str = "knowledgeforge"
+    chunk_size: int = 500
+    chunk_overlap: int = 50
 
     model_config = SettingsConfigDict(
         env_file=".env",

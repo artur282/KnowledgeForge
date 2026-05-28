@@ -4,6 +4,7 @@ import logging
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from openai import OpenAIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from knowledgeforge.chat.repositories import ChatMessageRepository, ChatSessionRepository
@@ -15,7 +16,7 @@ from knowledgeforge.chat.schemas import (
     SourceInfo,
 )
 from knowledgeforge.chat.services import RAGChatService
-from knowledgeforge.config import Settings
+from knowledgeforge.db.deps import get_session, get_settings
 from knowledgeforge.search.services import HybridSearchService
 
 logger = logging.getLogger(__name__)
@@ -23,24 +24,19 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 
-async def get_session(request: Request) -> AsyncSession:
-    """Get database session from app state."""
-    session_factory = request.app.state.session_factory
-    async with session_factory() as session:
-        try:
-            yield session
-        finally:
-            await session.close()
-
-
 def get_rag_service(
     request: Request,
     session: AsyncSession = Depends(get_session),
+    settings=Depends(get_settings),
 ) -> RAGChatService:
     """Dependency injection for RAGChatService."""
-    settings = Settings()
-    search_service = HybridSearchService(session, request.app.state.es_client)
-    return RAGChatService(session, settings, search_service)
+    search_service = HybridSearchService(
+        session,
+        request.app.state.es_client,
+        settings=settings,
+        embeddings=request.app.state.embeddings,
+    )
+    return RAGChatService(session, settings, search_service, llm=request.app.state.llm)
 
 
 @router.post(
@@ -53,16 +49,23 @@ async def chat(
     service: RAGChatService = Depends(get_rag_service),
 ):
     """Execute RAG Q&A with session memory."""
-    answer, sources, session_id = await service.chat(
-        question=request.question,
-        session_id=request.session_id,
-    )
+    try:
+        answer, sources, session_id = await service.chat(
+            question=request.question,
+            session_id=request.session_id,
+        )
 
-    return ChatResponse(
-        answer=answer,
-        sources=[SourceInfo(**s) for s in sources],
-        session_id=session_id,
-    )
+        return ChatResponse(
+            answer=answer,
+            sources=[SourceInfo(**s) for s in sources],
+            session_id=session_id,
+        )
+    except OpenAIError:
+        logger.exception("OpenAI API error")
+        raise HTTPException(status_code=502, detail="LLM service unavailable") from None
+    except Exception:
+        logger.exception("Chat failed")
+        raise HTTPException(status_code=503, detail="Chat service unavailable") from None
 
 
 @router.get(

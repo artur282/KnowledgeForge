@@ -1,11 +1,5 @@
 import { NavLink } from "react-router-dom"
-import {
-  FileText,
-  Search,
-  MessageSquare,
-  Wrench,
-  BarChart3,
-} from "lucide-react"
+import { FileText, Search, MessageSquare, Wrench, BarChart3 } from "lucide-react"
 
 const NAV_ITEMS = [
   { to: "/documents", label: "DOCUMENTS", icon: FileText, index: "01" },

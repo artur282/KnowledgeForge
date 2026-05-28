@@ -6,7 +6,6 @@ from uuid import UUID
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_openai import ChatOpenAI
-from langfuse.langchain import CallbackHandler
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from knowledgeforge.chat.repositories import ChatMessageRepository, ChatSessionRepository
@@ -38,6 +37,7 @@ class RAGChatService:
         session: AsyncSession,
         settings: Settings,
         search_service: HybridSearchService,
+        llm: ChatOpenAI | None = None,
     ) -> None:
         self.session = session
         self.settings = settings
@@ -45,14 +45,18 @@ class RAGChatService:
         self.session_repo = ChatSessionRepository(session)
         self.message_repo = ChatMessageRepository(session)
 
-        self.llm = ChatOpenAI(
-            model="nvidia/nemotron-3-nano-30b-a3b:free",
+        self.llm = llm or ChatOpenAI(
+            model=settings.llm_model,
             openai_api_key=settings.openai_api_key,
             base_url=settings.openai_base_url,
             temperature=0,
         )
 
-        self.langfuse_handler = CallbackHandler()
+        self.callbacks = []
+        if settings.langfuse_public_key:
+            from langfuse.callback import CallbackHandler
+
+            self.callbacks.append(CallbackHandler())
 
         self.chain = (
             {
@@ -99,7 +103,7 @@ class RAGChatService:
 
         response = await self.chain.ainvoke(
             {"question": question},
-            config={"callbacks": [self.langfuse_handler]},
+            config={"callbacks": self.callbacks},
         )
 
         answer = response.content if hasattr(response, "content") else str(response)

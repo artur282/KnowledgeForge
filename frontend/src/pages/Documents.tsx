@@ -6,7 +6,7 @@ import { DocumentTable } from "../components/documents/DocumentTable"
 import { toast } from "sonner"
 
 export function Documents() {
-  const { documents, loading, error, upload, delete: deleteDoc } = useDocuments()
+  const { documents, loading, fetching, error, upload, delete: deleteDoc } = useDocuments()
 
   async function handleUpload(file: File) {
     try {
@@ -49,7 +49,7 @@ export function Documents() {
             [!] {error}
           </div>
         )}
-        <DocumentTable documents={documents} onDelete={handleDelete} />
+        <DocumentTable documents={documents} onDelete={handleDelete} loading={fetching} />
       </PanelCard>
     </div>
   )

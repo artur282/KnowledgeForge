@@ -5,9 +5,45 @@ import type { DocumentResponse } from "../../types"
 interface DocumentTableProps {
   documents: DocumentResponse[]
   onDelete: (id: string) => void
+  loading?: boolean
 }
 
-export function DocumentTable({ documents, onDelete }: DocumentTableProps) {
+export function DocumentTable({ documents, onDelete, loading }: DocumentTableProps) {
+  if (loading) {
+    return (
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse font-body text-sm">
+          <thead>
+            <tr>
+              <th className="px-4 py-3 text-left text-text-muted text-xs font-medium tracking-widest uppercase border-b border-border-default">
+                FILENAME
+              </th>
+              <th className="px-4 py-3 text-left text-text-muted text-xs font-medium tracking-widest uppercase border-b border-border-default">
+                STATUS
+              </th>
+              <th className="px-4 py-3 text-left text-text-muted text-xs font-medium tracking-widest uppercase border-b border-border-default">
+                HASH
+              </th>
+              <th className="px-4 py-3 text-right text-text-muted text-xs font-medium tracking-widest uppercase border-b border-border-default">
+                ACTIONS
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {[1, 2, 3].map((i) => (
+              <tr key={i} className="border-b border-border-ghost">
+                <td className="px-4 py-3"><div className="h-4 w-40 bg-bg-surface-hover rounded animate-pulse" /></td>
+                <td className="px-4 py-3"><div className="h-4 w-16 bg-bg-surface-hover rounded animate-pulse" /></td>
+                <td className="px-4 py-3"><div className="h-4 w-24 bg-bg-surface-hover rounded animate-pulse" /></td>
+                <td className="px-4 py-3 text-right"><div className="h-4 w-8 bg-bg-surface-hover rounded animate-pulse ml-auto" /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+
   if (documents.length === 0) {
     return (
       <div className="text-center py-12">

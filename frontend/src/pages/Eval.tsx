@@ -7,24 +7,31 @@ import { toast } from "sonner"
 export function Eval() {
   const [reports, setReports] = useState<EvalReportItem[]>([])
   const [running, setRunning] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(
     function loadReportsOnMount() {
-      listEvalReports().then(function handleSuccess(response) {
-        setReports(response.reports)
-      })
+      listEvalReports()
+        .then(function handleSuccess(response) {
+          setReports(response.reports)
+        })
+        .catch(function handleError(err) {
+          setError(err instanceof Error ? err.message : "Failed to load reports")
+        })
     },
     [],
   )
 
   async function handleRun() {
     setRunning(true)
+    setError(null)
     try {
       await runEvaluation()
       toast.success("[$ EVAL_COMPLETE] Report generated")
       const response = await listEvalReports()
       setReports(response.reports)
-    } catch {
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Evaluation failed")
       toast.error("[! EVAL_FAILED]")
     } finally {
       setRunning(false)
@@ -41,6 +48,12 @@ export function Eval() {
           RAGAS -- faithfulness, answer_relevancy, context_precision
         </span>
       </div>
+
+      {error && (
+        <div className="mb-4 px-4 py-2 bg-error/10 border border-error/20 rounded text-error text-xs font-body">
+          [!] {error}
+        </div>
+      )}
 
       <PanelCard index="01" title="RUN_EVALUATION">
         <button
