@@ -20,10 +20,14 @@ RUN uv sync --no-dev
 COPY --chown=appuser:appgroup src/ ./src/
 COPY --chown=appuser:appgroup alembic/ ./alembic/
 COPY --chown=appuser:appgroup alembic.ini ./
+COPY --chown=appuser:appgroup entrypoint.sh ./entrypoint.sh
+USER root
+RUN chmod +x ./entrypoint.sh
+USER appuser
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:8000/health || exit 1
 EXPOSE 8000
-CMD ["python", "-m", "uvicorn", "knowledgeforge.main:app", "--host", "0.0.0.0", "--port", "8000"]
+ENTRYPOINT ["./entrypoint.sh"]
 
 # Development stage - with hot reload
 FROM base AS development

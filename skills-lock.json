@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "dokploy-docker-compose": {
+      "source": "trfi/skills",
+      "sourceType": "github",
+      "skillPath": "skills/dokploy-docker-compose/SKILL.md",
+      "computedHash": "57e35110bb175c606095d1ee041ce46b49baadfafe75a9514d59fee07556aa85"
+    },
     "elasticsearch-esql": {
       "source": "elastic/agent-skills",
       "sourceType": "github",
