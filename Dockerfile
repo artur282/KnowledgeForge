@@ -6,7 +6,7 @@ RUN pip install --no-cache-dir uv
 # Install all dependencies (prod + dev) for testing
 FROM base AS dev-deps
 COPY pyproject.toml uv.lock ./
-RUN uv sync --group dev
+RUN uv sync --group dev --no-editable
 COPY src/ ./src/
 
 # Production stage - minimal
@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf 
 RUN chown -R appuser:appgroup /app
 COPY --chown=appuser:appgroup pyproject.toml uv.lock ./
 USER appuser
-RUN uv sync --no-dev
+RUN uv sync --no-dev --no-editable
 COPY --chown=appuser:appgroup src/ ./src/
 COPY --chown=appuser:appgroup alembic/ ./alembic/
 COPY --chown=appuser:appgroup alembic.ini ./
@@ -36,7 +36,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf 
 RUN chown -R appuser:appgroup /app
 COPY --chown=appuser:appgroup pyproject.toml uv.lock ./
 USER appuser
-RUN uv sync --group dev
+RUN uv sync --group dev --no-editable
 COPY --chown=appuser:appgroup src/ ./src/
 COPY --chown=appuser:appgroup alembic/ ./alembic/
 COPY --chown=appuser:appgroup alembic.ini ./
@@ -49,7 +49,7 @@ CMD ["uv", "run", "uvicorn", "knowledgeforge.main:app", "--host", "0.0.0.0", "--
 # Test stage - runs pytest
 FROM base AS test
 COPY pyproject.toml uv.lock ./
-RUN uv sync --group dev
+RUN uv sync --group dev --no-editable
 COPY src/ ./src/
 COPY tests/ ./tests/
 
