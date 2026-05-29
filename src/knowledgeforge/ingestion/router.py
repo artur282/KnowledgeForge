@@ -58,6 +58,19 @@ async def _process_in_background(
             await session.close()
 
 
+@router.get(
+    "",
+    response_model=list[DocumentResponse],
+    operation_id="listDocuments",
+)
+async def list_documents(
+    repo: DocumentRepository = Depends(get_document_repo),
+):
+    """List all documents."""
+    docs = await repo.list_all()
+    return [DocumentResponse.model_validate(d) for d in docs]
+
+
 @router.post(
     "",
     response_model=DocumentUploadResponse,

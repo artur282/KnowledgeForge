@@ -34,6 +34,11 @@ class DocumentRepository:
             await self.session.flush()
         return doc
 
+    async def list_all(self) -> list[Document]:
+        """List all documents ordered by most recent."""
+        result = await self.session.execute(select(Document).order_by(Document.uploaded_at.desc()))
+        return list(result.scalars().all())
+
     async def delete(self, doc_id: UUID) -> bool:
         """Delete document and cascade-delete its chunks. Returns True if found."""
         doc = await self.get_by_id(doc_id)

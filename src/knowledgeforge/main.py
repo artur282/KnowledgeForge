@@ -65,12 +65,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         model=settings.embedding_model,
         openai_api_key=settings.openai_api_key,
         base_url=settings.openai_base_url,
+        request_timeout=60,
     )
     app.state.llm = ChatOpenAI(
         model=settings.llm_model,
         openai_api_key=settings.openai_api_key,
         base_url=settings.openai_base_url,
         temperature=0,
+        request_timeout=60,
     )
 
     logger.info("Database engine initialized")

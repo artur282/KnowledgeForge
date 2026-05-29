@@ -38,6 +38,7 @@ class IngestionService:
             model=settings.embedding_model,
             openai_api_key=settings.openai_api_key,
             base_url=settings.openai_base_url,
+            request_timeout=60,
         )
 
     @staticmethod
@@ -51,6 +52,7 @@ class IngestionService:
                     model=settings.embedding_model,
                     openai_api_key=settings.openai_api_key,
                     base_url=settings.openai_base_url,
+                    request_timeout=60,
                 )
                 return SemanticChunker(
                     embeddings,
