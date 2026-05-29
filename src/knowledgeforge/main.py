@@ -42,6 +42,25 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     info = await app.state.es_client.info()
     logger.info("Elasticsearch connected: %s", info["version"]["number"])
 
+    index_name = settings.elasticsearch_index
+    if not await app.state.es_client.indices.exists(index=index_name):
+        await app.state.es_client.indices.create(
+            index=index_name,
+            body={
+                "mappings": {
+                    "properties": {
+                        "document_id": {"type": "keyword"},
+                        "chunk_index": {"type": "integer"},
+                        "content": {"type": "text"},
+                        "content_suggest": {"type": "text"},
+                        "filename": {"type": "keyword"},
+                        "metadata": {"type": "object", "enabled": False},
+                    }
+                }
+            },
+        )
+        logger.info("Created Elasticsearch index: %s", index_name)
+
     app.state.embeddings = OpenAIEmbeddings(
         model=settings.embedding_model,
         openai_api_key=settings.openai_api_key,
